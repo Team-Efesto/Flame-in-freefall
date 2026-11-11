@@ -26,3 +26,4 @@ df = pd.DataFrame(data)
 st.dataframe(df[df["O2 (%)"] <= livello_ossigeno])
 
 #ciao
+#esempio
