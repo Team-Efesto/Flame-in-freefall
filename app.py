@@ -24,3 +24,5 @@ df = pd.DataFrame(data)
 
 # Visualizzazione della tabella filtrata
 st.dataframe(df[df["O2 (%)"] <= livello_ossigeno])
+
+#ciao
