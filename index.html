@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Dashboard | Nexo</title>
+	<style>
+		:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#20243a;background:#f6f7fb;font-synthesis:none}*{box-sizing:border-box}body{margin:0}button{font:inherit}.layout{min-height:100vh;display:grid;grid-template-columns:235px minmax(0,1fr)}aside{background:#fff;border-right:1px solid #eceef4;padding:26px 17px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:750;margin:0 10px 38px}.logo{width:34px;height:34px;border-radius:11px;background:#6858e8;color:#fff;display:grid;place-items:center;font-weight:800;box-shadow:0 5px 13px #6858e844}.label{margin:0 12px 10px;color:#a1a5b3;font-size:10px;font-weight:750;letter-spacing:1.2px}.nav{display:grid;gap:5px}.nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px;color:#747b8e;text-decoration:none;font-size:13px}.nav a:hover,.nav a.current{color:#6858e8;background:#f0eeff}.nav a.current{font-weight:650}.nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8}.pill{margin-left:auto;padding:3px 7px;border-radius:20px;background:#fff0f2;color:#de7181;font-size:10px}.sidebar-bottom{margin-top:auto}.upgrade{padding:15px;margin:20px 3px;background:#f5f3ff;border-radius:12px}.upgrade b{font-size:12px}.upgrade p{font-size:11px;line-height:1.5;color:#85899a;margin:7px 0 12px}.upgrade button,.primary{border:0;border-radius:7px;background:#6858e8;color:#fff;padding:9px 12px;font-size:11px;font-weight:650;cursor:pointer}.user{border-top:1px solid #eee;padding:17px 4px 0;display:flex;align-items:center;gap:10px}.avatar{width:33px;height:33px;border-radius:50%;display:grid;place-items:center;background:#ffeadf;color:#b8704d;font-size:10px;font-weight:750}.user b,.user small{display:block}.user b{font-size:11px}.user small{font-size:10px;color:#9398a7;margin-top:3px}main{padding:27px clamp(18px,3vw,42px) 36px;min-width:0}.topbar{display:flex;align-items:center;gap:14px;margin-bottom:31px}.search{position:relative;width:min(340px,50%)}.search input{width:100%;border:1px solid #e9ebf2;border-radius:9px;padding:11px 13px 11px 37px;background:#fff;outline:none;font-size:11px}.search input:focus{border-color:#a79cf6}.search span{position:absolute;left:13px;top:8px;color:#9298a8;font-size:17px}.right{margin-left:auto;display:flex;align-items:center;gap:10px}.date,.icon-btn{border:1px solid #e9ebf2;border-radius:8px;background:#fff;color:#70778b;padding:9px 11px;font-size:10px}.icon-btn{font-size:15px;position:relative}.dot{position:absolute;width:6px;height:6px;background:#ed7587;border:1px solid white;border-radius:50%;right:7px;top:6px}.welcome{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:22px}.welcome p{color:#8b91a1;font-size:11px;margin:0 0 7px}.welcome h1{font-size:28px;letter-spacing:-.8px;margin:0}.welcome .sub{margin:8px 0 0}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:17px}.card{background:#fff;border:1px solid #eceef4;border-radius:12px;box-shadow:0 3px 12px #242b4305}.metric{padding:17px}.metric-head{display:flex;justify-content:space-between;align-items:center;color:#818798;font-size:11px}.metric-icon{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;background:#f0eeff;color:#705fe7;font-size:14px}.green{background:#e8f7f0;color:#3ba582}.yellow{background:#fff4e3;color:#d99a43}.pink{background:#fff0f3;color:#df7689}.value{font-size:25px;font-weight:730;letter-spacing:-.8px;margin:14px 0 7px}.change{font-size:10px;color:#35a17f;font-weight:650}.change span{font-weight:400;color:#969baa;margin-left:4px}.negative{color:#df7689}.columns{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,.9fr);gap:16px;margin-bottom:16px}.panel{padding:19px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.panel h2{margin:0;font-size:13px}.muted{margin:5px 0 0;color:#9398a7;font-size:10px}.select{background:#fff;border:1px solid #eceef4;color:#73798b;border-radius:7px;padding:7px 9px;font-size:10px}.chart{width:100%;height:auto;margin-top:14px;display:block}.chart text{font:9px inherit;fill:#9ba0ad}.chart line.grid{stroke:#eff0f5}.chart .area{fill:url(#fade)}.chart .line{fill:none;stroke:#7664e9;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.chart .secondary{fill:none;stroke:#bcb4f5;stroke-width:2;stroke-dasharray:4 5}.legend{display:flex;justify-content:center;gap:20px;color:#858b9b;font-size:10px}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#7664e9;margin-right:5px}.legend .light{background:#bcb4f5}.sources{display:grid;gap:18px;margin-top:21px}.source{display:grid;grid-template-columns:30px 1fr auto;gap:9px;align-items:center}.source-icon{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;background:#f0eeff;color:#6858e8;font-size:11px;font-weight:750}.source-icon.g{background:#e9f7f1;color:#3ba582}.source-icon.o{background:#fff4e4;color:#d99a43}.source-icon.b{background:#edf4ff;color:#5687cf}.source b{display:block;font-size:10px}.source small{display:block;color:#9a9eaa;font-size:9px;margin-top:3px}.percent{font-size:10px;font-weight:650}.track{grid-column:2/4;height:4px;background:#f0f1f5;border-radius:5px;margin-top:-4px;overflow:hidden}.fill{height:100%;border-radius:5px;background:#7664e9}.fill.g{background:#49b993}.fill.o{background:#efb25c}.fill.b{background:#699be2}.bottom{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(250px,.9fr);gap:16px}.table-wrap{overflow:auto;margin-top:14px}table{border-collapse:collapse;width:100%;white-space:nowrap;text-align:left}th{font-size:9px;color:#9a9eaa;font-weight:550;padding:9px 8px;border-bottom:1px solid #f0f1f5}td{font-size:10px;color:#687084;padding:11px 8px;border-bottom:1px solid #f3f4f7}tr:last-child td{border:0}.project{color:#30354a;font-weight:650}.badge{display:inline-grid;place-items:center;width:23px;height:23px;margin-right:7px;border-radius:7px;background:#f0eeff;color:#6858e8}.badge.g{background:#e9f7f1;color:#3ba582}.badge.o{background:#fff4e4;color:#d99a43}.status{border-radius:20px;background:#eaf7f0;color:#3b9e79;padding:5px 8px;font-size:9px}.status.review{background:#fff4e5;color:#d49a43}.activity-list{display:grid;gap:17px;margin-top:19px}.activity{display:grid;grid-template-columns:29px 1fr;gap:10px}.activity .avatar{width:29px;height:29px;background:#eae7ff;color:#6b5bdb}.activity:nth-child(2) .avatar{background:#ffeadf;color:#b8704d}.activity:nth-child(3) .avatar{background:#e7f0ff;color:#5684c3}.activity p{font-size:10px;line-height:1.5;color:#70778a;margin:0}.activity strong{color:#30354a}.activity time{display:block;color:#a0a4b0;font-size:9px;margin-top:3px}
+		@media(max-width:1000px){.layout{grid-template-columns:205px minmax(0,1fr)}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:22px}}
+		@media(max-width:720px){.layout{display:block}aside{display:none}main{padding:17px 14px 28px}.topbar{margin-bottom:24px}.date{display:none}.columns,.bottom{grid-template-columns:1fr}.welcome h1{font-size:24px}.panel{padding:16px}}
+		@media(max-width:430px){.cards{gap:9px}.metric{padding:12px}.metric-head{font-size:10px}.value{font-size:21px}.welcome{align-items:flex-start}.welcome .primary{padding:9px;font-size:10px;white-space:nowrap}.search{width:58%}.topbar{gap:8px}}
+	</style>
+</head>
+<body>
+	<div class="layout">
+		<aside>
+			<div class="brand"><span class="logo">N</span>Nexo</div>
+			<p class="label">MENÚ PRINCIPAL</p>
+			<nav class="nav" aria-label="Menú principal">
+				<a class="current" href="#overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Panel general</a>
+				<a href="#analytics"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h17M8 15l4-4 3 2 5-6"/></svg>Analíticas</a>
+				<a href="#projects"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></svg>Proyectos <span class="pill">8</span></a>
+				<a href="#team"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0m2-14a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg>Equipo</a>
+				<a href="#reports"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 8h8m-8 4h8m-8 4h5"/></svg>Informes</a>
+			</nav>
+			<div class="sidebar-bottom">
+				<div class="upgrade"><b>Mejora tu espacio</b><p>Accede a informes avanzados y más herramientas para tu equipo.</p><button type="button">Ver planes →</button></div>
+				<div class="user"><span class="avatar">MG</span><div><b>María García</b><small>Administradora</small></div></div>
+			</div>
+		</aside>
+		<main id="overview">
+			<header class="topbar">
+				<label class="search"><span>⌕</span><input type="search" placeholder="Buscar en tu espacio..." aria-label="Buscar"></label>
+				<div class="right"><button class="date" type="button">▦ &nbsp;Últimos 30 días⌄</button><button class="icon-btn" type="button" aria-label="Notificaciones">♧<i class="dot"></i></button></div>
+			</header>
+			<section class="welcome"><div><p>Lunes, 24 de junio de 2024</p><h1>¡Hola, María! 👋</h1><p class="sub">Aquí tienes el resumen de lo que ocurre en tu espacio.</p></div><button class="primary" type="button" onclick="window.print()">＋ Crear informe</button></section>
+			<section class="cards" aria-label="Indicadores principales">
+				<article class="card metric"><div class="metric-head">Ingresos totales <span class="metric-icon">€</span></div><div class="value">€24.680</div><div class="change">↑ 12,8% <span>vs. mes anterior</span></div></article>
+				<article class="card metric"><div class="metric-head">Usuarios activos <span class="metric-icon green">♙</span></div><div class="value">8.549</div><div class="change">↑ 8,2% <span>vs. mes anterior</span></div></article>
+				<article class="card metric"><div class="metric-head">Conversión <span class="metric-icon yellow">↗</span></div><div class="value">4,28%</div><div class="change negative">↓ 1,4% <span>vs. mes anterior</span></div></article>
+				<article class="card metric"><div class="metric-head">Pedidos <span class="metric-icon pink">▱</span></div><div class="value">1.248</div><div class="change">↑ 6,7% <span>vs. mes anterior</span></div></article>
+			</section>
+			<section class="columns">
+				<article class="card panel" id="analytics">
+					<div class="panel-head"><div><h2>Rendimiento general</h2><p class="muted">Actividad de tu espacio durante el último mes</p></div><select class="select" aria-label="Periodo"><option>Este mes</option><option>Últimos 7 días</option><option>Este año</option></select></div>
+					<svg class="chart" viewBox="0 0 600 220" role="img" aria-label="Gráfico de visitantes e interacciones">
+						<defs><linearGradient id="fade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7664e9" stop-opacity=".2"/><stop offset="1" stop-color="#7664e9" stop-opacity="0"/></linearGradient></defs>
+						<g><line class="grid" x1="43" y1="20" x2="590" y2="20"/><line class="grid" x1="43" y1="60" x2="590" y2="60"/><line class="grid" x1="43" y1="100" x2="590" y2="100"/><line class="grid" x1="43" y1="140" x2="590" y2="140"/><line class="grid" x1="43" y1="180" x2="590" y2="180"/></g>
+						<g><text x="3" y="23">5.000</text><text x="3" y="63">4.000</text><text x="3" y="103">3.000</text><text x="3" y="143">2.000</text><text x="3" y="183">1.000</text></g>
+						<path class="area" d="M48 143 C75 137 80 119 105 125S145 151 170 113S211 91 235 105S276 121 300 82S341 72 365 86S405 110 430 68S471 43 495 59S539 80 565 35V180H48Z"/>
+						<path class="secondary" d="M48 156C75 150 82 139 105 144S145 130 170 142S211 118 235 127S276 102 300 113S341 93 365 104S405 86 430 98S471 77 495 90S539 63 565 72"/>
+						<path class="line" d="M48 143C75 137 80 119 105 125S145 151 170 113S211 91 235 105S276 121 300 82S341 72 365 86S405 110 430 68S471 43 495 59S539 80 565 35"/>
+						<g><text x="44" y="202">1 jun</text><text x="145" y="202">6 jun</text><text x="246" y="202">11 jun</text><text x="347" y="202">16 jun</text><text x="448" y="202">21 jun</text><text x="548" y="202">26 jun</text></g>
+					</svg>
+					<div class="legend"><span><i></i>Visitantes</span><span><i class="light"></i>Interacciones</span></div>
+				</article>
+				<article class="card panel">
+					<div class="panel-head"><div><h2>Fuentes de tráfico</h2><p class="muted">De dónde viene tu audiencia</p></div><button class="select" type="button" aria-label="Más opciones">···</button></div>
+					<div class="sources">
+						<div class="source"><span class="source-icon">G</span><div><b>Búsqueda orgánica</b><small>Google y otros buscadores</small></div><span class="percent">42%</span><div class="track"><div class="fill" style="width:42%"></div></div></div>
+						<div class="source"><span class="source-icon g">↗</span><div><b>Redes sociales</b><small>Instagram, LinkedIn, etc.</small></div><span class="percent">28%</span><div class="track"><div class="fill g" style="width:28%"></div></div></div>
+						<div class="source"><span class="source-icon o">✉</span><div><b>Correo electrónico</b><small>Campañas y newsletters</small></div><span class="percent">18%</span><div class="track"><div class="fill o" style="width:18%"></div></div></div>
+						<div class="source"><span class="source-icon b">⌁</span><div><b>Tráfico directo</b><small>Visitas directas</small></div><span class="percent">12%</span><div class="track"><div class="fill b" style="width:12%"></div></div></div>
+					</div>
+				</article>
+			</section>
+			<section class="bottom">
+				<article class="card panel" id="projects">
+					<div class="panel-head"><div><h2>Proyectos recientes</h2><p class="muted">Seguimiento de tus proyectos activos</p></div><a class="select" href="#projects" style="text-decoration:none">Ver todos →</a></div>
+					<div class="table-wrap"><table><thead><tr><th>PROYECTO</th><th>ESTADO</th><th>FECHA LÍMITE</th><th>PROGRESO</th></tr></thead><tbody>
+						<tr><td class="project"><span class="badge">W</span>Rediseño web</td><td><span class="status">En curso</span></td><td>28 jun, 2024</td><td>78%</td></tr>
+						<tr><td class="project"><span class="badge g">M</span>Campaña de verano</td><td><span class="status review">En revisión</span></td><td>02 jul, 2024</td><td>54%</td></tr>
+						<tr><td class="project"><span class="badge o">A</span>Análisis de usuarios</td><td><span class="status">En curso</span></td><td>10 jul, 2024</td><td>32%</td></tr>
+					</tbody></table></div>
+				</article>
+				<article class="card panel">
+					<div class="panel-head"><div><h2>Actividad reciente</h2><p class="muted">Últimas actualizaciones del equipo</p></div><button class="select" type="button" aria-label="Más opciones">···</button></div>
+					<div class="activity-list">
+						<div class="activity"><span class="avatar">LC</span><p><strong>Laura C.</strong> actualizó el proyecto <strong>Rediseño web</strong><time>Hace 12 minutos</time></p></div>
+						<div class="activity"><span class="avatar">AP</span><p><strong>Andrés P.</strong> compartió un nuevo informe contigo<time>Hace 1 hora</time></p></div>
+						<div class="activity"><span class="avatar">SM</span><p><strong>Sofía M.</strong> completó una tarea de campaña<time>Hace 3 horas</time></p></div>
+					</div>
+				</article>
+			</section>
+		</main>
+	</div>
+</body>
+</html>
