@@ -1,29 +1,60 @@
 import streamlit as st
-import pandas as pd
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
 
-# Titolo principale dell'applicazione
-st.title("🔥 Flame in Freefall - Prototipo Dashboard")
+st.title("🧠 Assistente IA per la Sicurezza Antincendio")
+st.write("Fai una domanda sulle pubblicazioni e i report della NASA.")
 
-# Un semplice testo o sottotitolo
-st.write("Benvenuto nel pannello di controllo degli esperimenti NASA.")
+# 1. Inizializza l'IA (richiede una API key salvata nei segreti di Streamlit)
+# Nota: su Streamlit Cloud le API key si salvano nella sezione "Secrets", non nel codice.
+openai_api_key = st.secrets["OPENAI_API_KEY"]
+llm = ChatOpenAI(model="gpt-4o-mini", api_key=openai_api_key)
 
-# Inserire un componente interattivo (Sidebar con filtri)
-st.sidebar.header("Filtri di Ricerca")
-livello_ossigeno = st.sidebar.slider("Concentrazione di O2 (%)", 21, 100, 30)
+# 2. Carica il database vettoriale dalla cartella del progetto (precedentemente pushato)
+@st.cache_resource
+def load_vector_store():
+    # Punta alla cartella che hai generato offline e caricato su GitHub
+    embeddings = OpenAIEmbeddings(api_key=openai_api_key)
+    vector_store = Chroma(persist_directory="./vector_db", embedding_function=embeddings)
+    return vector_store
 
-# Mostrare il valore selezionato
-st.subheader(f"Analisi per il livello di O2: {livello_ossigeno}%")
+vector_store = load_vector_store()
 
-# Esempio di tabella dati
-data = {
-    "Esperimento": ["BASS-II", "Saffire-I", "ACME CFI-G"],
-    "Combustibile": ["Solido (Plastica)", "Solido (Tessuto)", "Gas (Propano)"],
-    "O2 (%)": [21, 23, 85]
-}
-df = pd.DataFrame(data)
+# 3. Configura il sistema RAG (Retrieval)
+prompt_template = ChatPromptTemplate.from_template("""
+Sei un assistente esperto in sicurezza spaziale per la NASA. 
+Usa il seguente contesto tratto dalle pubblicazioni scientifiche per rispondere alla domanda.
+Se non conosci la risposta in base al contesto, dillo chiaramente.
 
-# Visualizzazione della tabella filtrata
-st.dataframe(df[df["O2 (%)"] <= livello_ossigeno])
+Contesto:
+{context}
 
-#ciao
-#esempio
+Domanda: {input}
+""")
+
+document_chain = create_stuff_documents_chain(llm, prompt_template)
+retriever = vector_store.as_retriever(search_kwargs={"k": 3}) # Prende i 3 paragrafi più rilevanti
+rag_chain = create_retrieval_chain(retriever, document_chain)
+
+# 4. Interfaccia Chat
+user_query = st.chat_input("Es: Come si comporta una fiamma con il 30% di ossigeno?")
+
+if user_query:
+    # Mostra la domanda dell'utente
+    with st.chat_message("user"):
+        st.write(user_query)
+        
+    # Elabora e mostra la risposta dell'IA
+    with st.chat_message("assistant"):
+        with st.spinner("Analisi dei report NASA in corso..."):
+            response = rag_chain.invoke({"input": user_query})
+            st.write(response["answer"])
+            
+            # Mostra da dove ha preso le informazioni (Fonti)
+            with st.expander("Mostra le fonti (Report originali)"):
+                for i, doc in enumerate(response["context"]):
+                    st.markdown(f"**Fonte {i+1}:** {doc.metadata.get('source', 'Sconosciuta')}")
+                    st.caption(doc.page_content[:300] + "...")
