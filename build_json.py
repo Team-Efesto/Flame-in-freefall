@@ -1,5 +1,6 @@
 import os
 import glob
+import re
 import pandas as pd
 import json
 
@@ -39,7 +40,7 @@ def process_nasa_folder(folder_path, output_json_path, require_target=None):
             if require_target and require_target in df.columns:
                 df = df.dropna(subset=[require_target])
             
-            # Conversione sicura in numeri senza errori sulle colonne testuali
+            # Conversione sicura in numeri lasciando intatte le colonne di testo
             for col in df.columns:
                 try:
                     df[col] = pd.to_numeric(df[col])
@@ -48,6 +49,10 @@ def process_nasa_folder(folder_path, output_json_path, require_target=None):
             
             # Conversione garantita dei valori mancanti in None (diventa 'null' nel JSON)
             df = df.astype(object).where(pd.notnull(df), None)
+            
+            # Estrazione del codice PSI-XXX dal nome del file per collegarlo ai PDF
+            match = re.search(r'(psi-\d+)', file_name, re.IGNORECASE)
+            df['experiment_tag'] = match.group(1).upper() if match else "UNKNOWN"
             df['source_file'] = file_name
             
             records = df.to_dict(orient='records')
@@ -79,6 +84,6 @@ def process_nasa_folder(folder_path, output_json_path, require_target=None):
 if __name__ == "__main__":
     CARTELLA_DATI = r"./dati_nasa_raw/tabelle"
     FILE_JSON_OUTPUT = r"./data/neural_network_dataset.json"
-    COLONNA_TARGET = None  # Imposta "flame_spread_rate_mm_s" se vuoi filtrare solo le righe con quel target
+    COLONNA_TARGET = None  # Imposta "flame_spread_rate_mm_s" se vuoi scartare righe senza target
 
     process_nasa_folder(CARTELLA_DATI, FILE_JSON_OUTPUT, require_target=COLONNA_TARGET)
