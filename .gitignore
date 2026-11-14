@@ -2,5 +2,5 @@
 __pycache__/
 .env
 .streamlit/secrets.toml
-dati_nasa_raw
+dati_nasa_raw/
 venv/
