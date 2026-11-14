@@ -18,6 +18,31 @@ import pandas as pd
 from .config import PROCESSED_DIR, RAW_TABLES_DIR
 
 MAX_ROWS = 50_000
+
+
+def read_parquet(path) -> pd.DataFrame:
+    """Lettura Parquet via fastparquet: evita il bug di allocazione del lettore multi-thread di PyArrow
+    su Windows/Python 3.13 (ArrowMemoryError: realloc of size ... failed).
+
+    I valori mancanti vengono normalizzati a None, cosi' `x or ''` / `if x:` funzionano nel codice a valle:
+      * colonne nullable (Int64, boolean): pd.NA -> None (bool(pd.NA) solleva TypeError);
+      * colonne interamente vuote: fastparquet le legge come float64/NaN (NaN e' "vero" in un if)."""
+    df = pd.read_parquet(path, engine="fastparquet")
+    for c in df.columns:
+        s = df[c]
+        if len(s) and s.isna().all():
+            df[c] = pd.Series([None] * len(s), index=s.index, dtype=object)
+        elif isinstance(s.dtype, pd.api.extensions.ExtensionDtype) and s.dtype.kind in "iub" and s.isna().any():
+            df[c] = s.astype(object).where(s.notna(), None)
+    return df
+
+
+def _short(v, n: int = 80) -> str:
+    """Tronca etichette anomale (es. colonne di timestamp concatenate) per non gonfiare il prompt."""
+    s = str(v)
+    return s if len(s) <= n else s[:n - 1] + "…"
+
+
 _FORBIDDEN = re.compile(
     r"\b(attach|detach|copy|export|import|install|load|pragma|set|reset|create|insert|update|delete|drop|alter|"
     r"call|checkpoint|vacuum|read_csv\w*|read_parquet|read_json\w*|read_text|read_blob|glob|httpfs)\b",
@@ -44,13 +69,13 @@ class QueryResult:
 class DataStore:
     def __init__(self, processed_dir=PROCESSED_DIR):
         self.dir = processed_dir
-        self.points = pd.read_parquet(self.dir / "points.parquet")
-        self.series = pd.read_parquet(self.dir / "series.parquet")
-        self.datasets = pd.read_parquet(self.dir / "datasets.parquet")
-        self.documents = pd.read_parquet(self.dir / "documents.parquet")
-        self.pages = pd.read_parquet(self.dir / "doc_pages.parquet")
+        self.points = read_parquet(self.dir / "points.parquet")
+        self.series = read_parquet(self.dir / "series.parquet")
+        self.datasets = read_parquet(self.dir / "datasets.parquet")
+        self.documents = read_parquet(self.dir / "documents.parquet")
+        self.pages = read_parquet(self.dir / "doc_pages.parquet")
         exp_path = self.dir / "experiments.parquet"
-        self.experiments = pd.read_parquet(exp_path) if exp_path.exists() else pd.DataFrame()
+        self.experiments = read_parquet(exp_path) if exp_path.exists() else pd.DataFrame()
 
     # ------------------------------------------------------------------ SQL
     def _connection(self) -> duckdb.DuckDBPyConnection:
@@ -93,7 +118,7 @@ class DataStore:
         path = RAW_TABLES_DIR / f"{dataset}.parquet"
         if not path.exists():
             raise KeyError(f"Dataset sconosciuto: {dataset}")
-        df = pd.read_parquet(path)
+        df = read_parquet(path)
         for c in df.columns:
             num = pd.to_numeric(df[c], errors="coerce")
             if num.notna().sum() == df[c].notna().sum():
@@ -122,8 +147,8 @@ class DataStore:
         for r in self.series.itertuples():
             cond = ", ".join(str(v) for v in (r.fuel, r.pressure_atm, r.d0_mm) if v is not None and v == v)
             lines.append(
-                f"- {r.series_id} | {r.series_label} | {r.kind}{'*' if r.kind_inferred else ''} | {cond} | "
-                f"{r.x_var}[{r.x_unit}]→{r.y_var}[{r.y_unit}] | `{r.y_column}` | {r.n_points} | {r.y_min:.4g}…{r.y_max:.4g}")
+                f"- {r.series_id} | {_short(r.series_label)} | {r.kind}{'*' if r.kind_inferred else ''} | {cond} | "
+                f"{r.x_var}[{r.x_unit}]→{r.y_var}[{r.y_unit}] | `{_short(r.y_column)}` | {r.n_points} | {r.y_min:.4g}…{r.y_max:.4g}")
         lines.append("(* = tipo dedotto: serie non etichettata in un file che etichetta esplicitamente modelli/simulazioni)")
         lines.append("\n## Report PDF")
         for r in self.documents.itertuples():

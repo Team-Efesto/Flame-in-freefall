@@ -102,6 +102,15 @@ def xlsx_bytes(df: pd.DataFrame, title: str, meta_json: str) -> bytes:
     return to_xlsx_bytes(df, title, json.loads(meta_json))
 
 
+def lazy_download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
+    """Per tabelle grandi: CSV/Excel generati solo su richiesta, non ad ogni rerun."""
+    flag = f"prep_{key}"
+    if st.button(f"Prepara download ({len(df):,} righe)".replace(",", "."), key=f"{key}_prep"):
+        st.session_state[flag] = True
+    if st.session_state.get(flag):
+        download_buttons(df, title, key, meta)
+
+
 def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
     c1, c2, _ = st.columns([1, 1, 3])
     c1.download_button("⬇️ CSV", to_csv_bytes(df), safe_filename(title, "csv"), "text/csv",
@@ -282,7 +291,7 @@ with tab_dash:
         st.plotly_chart(style(fig, "Punti dati per dataset e tipo di serie", height=380), width="stretch", key="ov_bar")
 
         st.subheader("🔬 Esplora le serie")
-        fig_ds = ds_f[ds_f.role == "figure_data"]
+        fig_ds = ds_f[(ds_f.role == "figure_data") & ds_f.dataset.isin(series_f.dataset)]  # solo figure con serie
         labels = {r.dataset: f"{r.dataset} — {r.figure or ''} {('(' + r.journal + ' ' + str(r.year) + ')') if r.journal else ''}"
                   for r in fig_ds.itertuples()}
         c1, c2 = st.columns([3, 2])
@@ -390,5 +399,5 @@ with tab_cat:
 
     st.subheader("Dataset completo (formato lungo)")
     st.caption(f"{len(points_f):,} punti — una riga per punto (x, y) con serie, condizioni, unità e file sorgente.".replace(",", "."))
-    download_buttons(points_f, f"flame_in_freefall_punti_{tag or 'tutti'}", "cat_points",
+    lazy_download_buttons(points_f, f"flame_in_freefall_punti_{tag or 'tutti'}", "cat_points",
                      {"fonti": sorted(points_f.source_file.unique())})
