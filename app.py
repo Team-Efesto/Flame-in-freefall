@@ -15,12 +15,7 @@ st.set_page_config(page_title="Flame in Freefall - NASA PSI", page_icon="🔥", 
 
 ALL = "Tutti gli esperimenti"
 KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
-EXAMPLES = [
-    "Come varia il diametro di estinzione della cool flame con la pressione? Confronta esperimento e modello.",
-    "Estrai una tabella con le misure sperimentali di estinzione per n-eptano, n-decano e n-dodecano.",
-    "Qual è l'effetto dei gas diluenti (xenon, elio, CO2, argon) sui limiti di infiammabilità (LOI)?",
-    "Perché le cool flames in microgravità rappresentano un rischio critico per gli habitat pressurizzati?",
-]
+TAB_CHAT, TAB_DASH, TAB_DOCS = "💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici"
 
 # --------------------------------------------------------------------------- stile
 st.markdown("""
@@ -155,23 +150,24 @@ def filt(df: pd.DataFrame, col: str = "experiment_tag") -> pd.DataFrame:
 
 # --------------------------------------------------------------------------- rendering risposte
 def apply_explore(sugg: dict):
-    """Callback: prepara la sezione 'Esplora le serie' con il suggerimento dell'assistente."""
+    """Callback: imposta 'Esplora le serie' con i dati della risposta e apre la Dashboard dati."""
     if st.session_state.get("exp_tag", ALL) not in (ALL, sugg["experiment_tag"]):
         st.session_state.exp_tag = ALL
     st.session_state.explore_target = sugg
+    st.session_state.main_tab = TAB_DASH
+    st.session_state.panel_open = True
 
 
 def render_explore(guides: list[dict], key: str):
     if not guides:
         return
     with st.container(border=True):
-        st.markdown("**📊 Vedi questi dati in “Esplora le serie”**")
+        st.markdown("**📊 Grafici di questi dati nella Dashboard dati**")
         for i, g in enumerate(guides):
             c1, c2 = st.columns([3, 2], vertical_alignment="center")
             c1.markdown(f"**{g['figure'] or g['dataset']}** — {g['y_description']} · {len(g['series_ids'])} serie")
-            c2.button("⚡ Imposta questo grafico in automatico", key=f"{key}_explore_{i}", on_click=apply_explore, args=(g,),
+            c2.button("Mostra nel pannello →", key=f"{key}_explore_{i}", on_click=apply_explore, args=(g,),
                       width="stretch", help=f"Dataset {g['dataset']} · grandezza {g['y_var']}")
-        st.caption("Dopo aver premuto il pulsante, apri la scheda 📊 Dashboard dati.")
 
 
 def render_sources(msg: dict):
@@ -232,15 +228,46 @@ def to_message(result) -> dict:
     }
 
 
-# --------------------------------------------------------------------------- tabs
-tab_chat, tab_dash, tab_docs = st.tabs(["💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici"])
+# --------------------------------------------------------------------------- layout: chat al centro + pannello laterale a scomparsa
+st.session_state.setdefault("panel_open", False)
+
+
+def toggle_panel():
+    st.session_state.panel_open = not st.session_state.panel_open
+
+
+# Il pannello e' sempre renderizzato (cosi' grafici e selezioni restano pronti) ma, se chiuso, viene spostato fuori schermo.
+st.markdown(f"""
+<style>
+.st-key-chat_area {{ max-width: 1000px; margin: 0 auto; }}
+div[data-testid="stBottomBlockContainer"] {{ max-width: 1000px; margin: 0 auto; padding-bottom: 1.4rem; }}
+div[data-testid="stBottom"] > div {{ background: #0B0F1A; }}
+.st-key-side_panel {{
+    position: fixed; top: 0; right: 0; height: 100vh; width: min(760px, 52vw); z-index: 999990;
+    overflow-y: auto; overflow-x: hidden; padding: 4.2rem 1.6rem 2rem 1.6rem; gap: 0.6rem;
+    background: #0F1422; border-left: 1px solid #232B42; box-shadow: -18px 0 40px rgba(0,0,0,0.5);
+    transition: transform 0.25s ease, visibility 0.25s;
+    {"" if st.session_state.panel_open else "transform: translateX(105%); visibility: hidden;"}
+}}
+.st-key-panel_open_btn {{ position: fixed; top: 4.2rem; right: 1.2rem; z-index: 999989; width: auto !important; }}
+.st-key-panel_open_btn button {{ box-shadow: 0 6px 20px rgba(0,0,0,0.45); border-color: #FF6B2C; }}
+@media (max-width: 900px) {{ .st-key-side_panel {{ width: 100vw; padding: 4rem 16px 2rem 16px; }} }}
+</style>
+""", unsafe_allow_html=True)
+
+if not st.session_state.panel_open:
+    with st.container(key="panel_open_btn"):
+        st.button("📊 Dashboard dati e report", on_click=toggle_panel, type="primary")
 
 # ============================== ASSISTENTE ==============================
-with tab_chat:
+# chat_input al livello principale: Streamlit lo fissa in fondo allo schermo, indipendente dallo scorrimento.
+query = st.chat_input("Es: confronta il diametro di estinzione sperimentale e simulato al variare della pressione",
+                      disabled=not api_key)
+
+with st.container(key="chat_area"):
+    st.subheader(TAB_CHAT)
     chat_box = st.container()
     with chat_box:
-        if not st.session_state.messages:
-            st.markdown("##### Prova a chiedere")
         for i, m in enumerate(st.session_state.messages):
             with st.chat_message(m["role"]):
                 if m["role"] == "assistant":
@@ -248,18 +275,9 @@ with tab_chat:
                 else:
                     st.markdown(m["content"])
 
-    example = None
-    if not st.session_state.messages:
-        cols = st.columns(2)
-        for i, q in enumerate(EXAMPLES):
-            if cols[i % 2].button(q, key=f"ex{i}", width="stretch"):
-                example = q
-
     if not api_key:
         st.warning("Chiave `ANTHROPIC_API_KEY` mancante in `st.secrets`: l'assistente è disattivato, "
                    "dashboard e report restano consultabili.")
-    query = st.chat_input("Es: confronta il diametro di estinzione sperimentale e simulato al variare della pressione",
-                          disabled=not api_key) or example
 
     if query and api_key:
         agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
@@ -291,8 +309,21 @@ with tab_chat:
                     st.session_state.messages.append(msg)
                     st.session_state.api_history += [{"role": "user", "content": query},
                                                      {"role": "assistant", "content": FlameAgent.history_entry(result)}]
+                    # prepara nel pannello laterale il primo grafico dei dati consultati (senza aprirlo sopra la chat)
+                    first = next((g for g in msg["explores"] if tag in (None, g["experiment_tag"])), None)
+                    if first:
+                        st.session_state.explore_target = first
+                        st.session_state.main_tab = TAB_DASH
                 else:
                     st.session_state.messages.pop()
+
+# ============================== PANNELLO LATERALE ==============================
+side_panel = st.container(key="side_panel")
+with side_panel:
+    h1, h2 = st.columns([4, 1], vertical_alignment="center")
+    h1.markdown("#### 🔬 Dati e report")
+    h2.button("✕ Chiudi", key="panel_close_btn", on_click=toggle_panel, width="stretch")
+    tab_dash, tab_docs = st.tabs([TAB_DASH, TAB_DOCS], key="main_tab", on_change="rerun")
 
 # ============================== DASHBOARD ==============================
 with tab_dash:
