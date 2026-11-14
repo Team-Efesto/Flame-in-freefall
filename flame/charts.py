@@ -25,7 +25,7 @@ def style(fig: go.Figure, title: str | None = None, height: int = 460) -> go.Fig
         template="plotly_dark", height=height,
         title=dict(text=title or "", font=dict(size=16, color=TEXT), x=0, xanchor="left"),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color=MUTED, size=13),
+        font=dict(family="'Times New Roman', Tinos, Times, serif", color=MUTED, size=13),
         legend=dict(orientation="h", yanchor="top", y=-0.16, x=0, title_text="", font=dict(color=TEXT)),
         margin=dict(l=10, r=10, t=56 if title else 24, b=10),
         hoverlabel=dict(bgcolor="#141A2B", bordercolor="#2E3856", font=dict(color=TEXT)),

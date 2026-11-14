@@ -21,7 +21,7 @@ I dati sperimentali (diametri di goccia e di fiamma, radianza, temperature, diam
 | Sezione | Cosa offre |
 |---|---|
 | 💬 **Assistente IA** | Domande in linguaggio naturale. Domande quantitative → query SQL sul dataset completo + tabella scaricabile; trend/confronti → grafico Plotly; domande teoriche → risposta dai report senza grafici. Pannelli "Fonti consultate" e "Dettagli dell'analisi" (query SQL eseguite, token). |
-| 📊 **Dashboard dati** | KPI, punti per dataset e tipo (esperimento / modello / simulazione), esploratore di serie con scala log, tabella dei punti e tabella originale NASA, download CSV/XLSX. |
+| 📊 **Dashboard dati** | Esploratore di serie con scala log, tabella dei punti e tabella originale NASA, download CSV/XLSX. |
 | 📚 **Report scientifici** | Sintesi per esperimento, sommario e risultati chiave (con pagine) per ogni PDF, indice delle sezioni, ricerca ibrida, lettore di pagine. |
 | 🗂️ **Catalogo & export** | Catalogo dataset (con DOI) e serie, export dell'intero dataset in formato lungo. |
 

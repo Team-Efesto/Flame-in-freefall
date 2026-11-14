@@ -2,11 +2,10 @@ import json
 
 import anthropic
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 from flame.agent import FlameAgent
-from flame.charts import PALETTE, series_chart, style
+from flame.charts import series_chart
 from flame.config import DEFAULT_MODEL
 from flame.data_store import DataStore
 from flame.export import safe_filename, to_csv_bytes, to_xlsx_bytes
@@ -16,12 +15,11 @@ st.set_page_config(page_title="Flame in Freefall - NASA PSI", page_icon="🔥", 
 
 ALL = "Tutti gli esperimenti"
 KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
-KIND_COLORS = {"Esperimento": PALETTE[0], "Modello": PALETTE[1], "Simulazione": PALETTE[2], "Non specificato": "#6B7280"}
 EXAMPLES = [
     "Come varia il diametro di estinzione della cool flame con la pressione? Confronta esperimento e modello.",
-    "Estrai una tabella con tutte le misure sperimentali di estinzione per n-eptano, n-decano e n-dodecano.",
-    "Riassumi i risultati principali della tesi di dottorato e cita le pagine.",
-    "Cos'è una cool flame e perché in microgravità è più facile osservarla?",
+    "Estrai una tabella con le misure sperimentali di estinzione per n-eptano, n-decano e n-dodecano.",
+    "Qual è l'effetto dei gas diluenti (xenon, elio, CO2, argon) sui limiti di infiammabilità (LOI)?",
+    "Perché le cool flames in microgravità rappresentano un rischio critico per gli habitat pressurizzati?",
 ]
 
 # --------------------------------------------------------------------------- stile
@@ -63,12 +61,13 @@ code { color: #FFB27D !important; background: rgba(255,107,44,0.10) !important; 
 </style>
 """, unsafe_allow_html=True)
 
+
 st.markdown("""
 <div class="hero">
-  <div class="hero-kicker">NASA PSI · Microgravity Combustion Science</div>
+  <div class="hero-kicker">NASA PSI · Lunar Habitat Fire Safety Engineering</div>
   <h1>🔥 Flame in Freefall</h1>
-  <p>Piattaforma scientifica interattiva: interroga in linguaggio naturale l'intero dataset sperimentale e i report
-  NASA PSI, ottieni grafici e tabelle scaricabili generati al volo, con citazione puntuale delle fonti.</p>
+  <p>Co-pilota ingegneristico per la sicurezza antincendio negli habitat lunari: correla dataset sperimentali e report
+  NASA PSI per analizzare limiti di estinzione, pressioni e diluenti, con grafici e fonti verificate.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -98,13 +97,18 @@ def get_client(api_key: str, workspace_id: str | None) -> anthropic.Anthropic:
 
 
 @st.cache_data(show_spinner=False, max_entries=64)
+def csv_bytes(df: pd.DataFrame) -> bytes:
+    return to_csv_bytes(df)
+
+
+@st.cache_data(show_spinner=False, max_entries=64)
 def xlsx_bytes(df: pd.DataFrame, title: str, meta_json: str) -> bytes:
     return to_xlsx_bytes(df, title, json.loads(meta_json))
 
 
 def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
     c1, c2, _ = st.columns([1, 1, 3])
-    c1.download_button("⬇️ CSV", to_csv_bytes(df), safe_filename(title, "csv"), "text/csv",
+    c1.download_button("⬇️ CSV", csv_bytes(df), safe_filename(title, "csv"), "text/csv",
                        key=f"{key}_csv", on_click="ignore", width="stretch")
     c2.download_button("⬇️ Excel", xlsx_bytes(df, title, json.dumps(meta or {}, default=str)), safe_filename(title, "xlsx"),
                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -117,21 +121,20 @@ ds_info = store.datasets.set_index("source_file")
 
 # --------------------------------------------------------------------------- sidebar
 st.sidebar.header("🔎 Filtro esperimento")
-selected_tag = st.sidebar.selectbox("Codice NASA PSI", [ALL] + store.experiment_tags,
+selected_tag = st.sidebar.selectbox("Codice NASA PSI", [ALL] + store.experiment_tags, key="exp_tag",
                                     help="Filtra dashboard, report e (come contesto) le ricerche dell'assistente.")
 tag = None if selected_tag == ALL else selected_tag
 
 api_key = secret("ANTHROPIC_API_KEY")
 model = secret("ANTHROPIC_MODEL", DEFAULT_MODEL)
 st.sidebar.divider()
-st.sidebar.caption(f"🤖 Modello: `{model}`")
-if index.collection is None:
-    st.sidebar.caption(f"⚠️ Ricerca semantica non disponibile, uso solo parole chiave. ({index.vector_error})")
 if st.sidebar.button("🗑️ Nuova conversazione", width="stretch"):
     st.session_state.messages, st.session_state.api_history = [], []
     st.rerun()
-st.sidebar.caption("Dati: NASA Physical Science Informatics (PSI). I valori tabellari sono i dati delle figure degli "
-                   "articoli citati (DOI nel catalogo).")
+st.sidebar.info(
+    "**Focus Missione:** Supporto decisionale per ingegneri di sicurezza antincendio (habitat lunari e moduli pressurizzati) "
+    "basato su dati sperimentali e pubblicazioni **NASA PSI**."
+)
 
 st.session_state.setdefault("messages", [])
 st.session_state.setdefault("api_history", [])
@@ -142,6 +145,26 @@ def filt(df: pd.DataFrame, col: str = "experiment_tag") -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------- rendering risposte
+def apply_explore(sugg: dict):
+    """Callback: prepara la sezione 'Esplora le serie' con il suggerimento dell'assistente."""
+    if st.session_state.get("exp_tag", ALL) not in (ALL, sugg["experiment_tag"]):
+        st.session_state.exp_tag = ALL
+    st.session_state.explore_target = sugg
+
+
+def render_explore(guides: list[dict], key: str):
+    if not guides:
+        return
+    with st.container(border=True):
+        st.markdown("**📊 Vedi questi dati in “Esplora le serie”**")
+        for i, g in enumerate(guides):
+            c1, c2 = st.columns([3, 2], vertical_alignment="center")
+            c1.markdown(f"**{g['figure'] or g['dataset']}** — {g['y_description']} · {len(g['series_ids'])} serie")
+            c2.button("⚡ Imposta questo grafico in automatico", key=f"{key}_explore_{i}", on_click=apply_explore, args=(g,),
+                      width="stretch", help=f"Dataset {g['dataset']} · grandezza {g['y_var']}")
+        st.caption("Dopo aver premuto il pulsante, apri la scheda 📊 Dashboard dati.")
+
+
 def render_sources(msg: dict):
     hits, files = msg.get("doc_hits", []), msg.get("data_sources", [])
     if not hits and not files:
@@ -164,6 +187,7 @@ def render_sources(msg: dict):
 
 def render_assistant(msg: dict, key: str):
     st.markdown(msg["content"])
+    render_explore(msg.get("explores", []), key)
     for i, ch in enumerate(msg.get("charts", [])):
         st.plotly_chart(ch["figure"], width="stretch", key=f"{key}_chart_{i}")
     for t in msg.get("tables", []):
@@ -172,7 +196,7 @@ def render_assistant(msg: dict, key: str):
         download_buttons(t["df"], t["title"], f"{key}_{t['id']}",
                          {"query SQL": t.get("sql") or "tabella originale", "fonti": t.get("sources", [])})
     render_sources(msg)
-    if msg.get("trace"):
+    if msg.get("trace") and secret("DEBUG_MODE", False):
         with st.expander("🛠️ Dettagli dell'analisi"):
             for step in msg["trace"]:
                 st.markdown(f"{'✅' if step['ok'] else '❌'} {step['label']}")
@@ -195,11 +219,12 @@ def to_message(result) -> dict:
         "doc_hits": [{"file": f, "page": p, **v} for (f, p), v in sorted(a.doc_hits.items())],
         "data_sources": a.data_sources,
         "trace": a.trace,
+        "explores": a.explores,
     }
 
 
 # --------------------------------------------------------------------------- tabs
-tab_chat, tab_dash, tab_docs, tab_cat = st.tabs(["💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici", "🗂️ Catalogo & export"])
+tab_chat, tab_dash, tab_docs = st.tabs(["💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici"])
 
 # ============================== ASSISTENTE ==============================
 with tab_chat:
@@ -263,69 +288,92 @@ with tab_chat:
 # ============================== DASHBOARD ==============================
 with tab_dash:
     series_f, points_f, ds_f = filt(store.series), filt(store.points), filt(store.datasets)
-    docs_f = filt(store.documents)
-    k = st.columns(5)
-    k[0].metric("Esperimenti PSI", len(set(ds_f.experiment_tag) | set(docs_f.experiment_tag)))
-    k[1].metric("Dataset / figure", int((ds_f.role == "figure_data").sum()))
-    k[2].metric("Serie", len(series_f))
-    k[3].metric("Punti dati", f"{len(points_f):,}".replace(",", "."))
-    k[4].metric("Report (pagine)", f"{len(docs_f)} ({int(docs_f.n_pages.sum())})")
 
     if series_f.empty:
         st.info("Nessun dato tabellare per questo esperimento.")
     else:
-        ov = series_f.assign(tipo=series_f.kind.map(KIND_LABELS)).groupby(["dataset", "tipo"], as_index=False).n_points.sum()
-        fig = px.bar(ov, x="n_points", y="dataset", color="tipo", orientation="h", color_discrete_map=KIND_COLORS,
-                     labels={"n_points": "Punti dati", "dataset": "", "tipo": ""})
-        fig.update_traces(marker_line_width=0)
-        fig.update_layout(bargap=0.3, yaxis=dict(categoryorder="total ascending"))
-        st.plotly_chart(style(fig, "Punti dati per dataset e tipo di serie", height=380), width="stretch", key="ov_bar")
-
         st.subheader("🔬 Esplora le serie")
         fig_ds = ds_f[ds_f.role == "figure_data"]
-        labels = {r.dataset: f"{r.dataset} — {r.figure or ''} {('(' + r.journal + ' ' + str(r.year) + ')') if r.journal else ''}"
-                  for r in fig_ds.itertuples()}
-        c1, c2 = st.columns([3, 2])
-        inv = {v: k for k, v in labels.items()}
-        dataset = inv[c1.selectbox("Dataset (figura)", list(inv))]
-        s_ds = series_f[series_f.dataset == dataset]
-        yvars = s_ds.y_var.value_counts().index.tolist()
-        ydesc = s_ds.drop_duplicates("y_var").set_index("y_var").y_description.to_dict()
-        ylab = {f"{v} — {ydesc.get(v, '')}": v for v in yvars}
-        y_var = ylab[c2.selectbox("Grandezza (asse y)", list(ylab))]
-        s_sel = s_ds[s_ds.y_var == y_var]
-        opts = s_sel.series_id.tolist()
-        fmt = s_sel.set_index("series_id").apply(lambda r: f"{r.name.split(':')[-1]} · {r.series_label} ({KIND_LABELS[r.kind]}) · {r.n_points} pt", axis=1).to_dict()
-        c3, c4, c5 = st.columns([4, 1, 1])
-        slab = {fmt[o]: o for o in opts}
-        chosen = [slab[x] for x in c3.multiselect("Serie", list(slab), default=list(slab)[:8], max_selections=8)]
-        log_x = c4.toggle("log x")
-        log_y = c5.toggle("log y")
-        if chosen:
-            pts = points_f[points_f.series_id.isin(chosen)]
-            st.plotly_chart(series_chart(pts, log_x, log_y, title=f"{dataset}: {ydesc.get(y_var, y_var)}"),
-                            width="stretch", key="dash_series")
-            info = fig_ds.set_index("dataset").loc[dataset]
-            st.caption(f"Fonte: `{info.source_file}` [{info.experiment_tag}]"
-                       + (f" — {info.journal} {info.year}, {info.figure} · [DOI]({info.reference_doi})" if info.reference_doi else ""))
-            m = st.columns(4)
-            m[0].metric("Punti selezionati", len(pts))
-            m[1].metric("y min", f"{pts.y.min():.4g} {pts.y_unit.iloc[0]}")
-            m[2].metric("y max", f"{pts.y.max():.4g} {pts.y_unit.iloc[0]}")
-            m[3].metric("y medio", f"{pts.y.mean():.4g} {pts.y_unit.iloc[0]}")
-            with st.expander("📋 Tabella dei punti selezionati", expanded=False):
-                cols = ["series_id", "series_label", "kind", "fuel", "pressure_atm", "d0_mm", "x_var", "x_unit", "x",
-                        "y_var", "y_unit", "y", "source_file", "x_column", "y_column"]
-                st.dataframe(pts[cols], width="stretch", hide_index=True, height=360)
-                download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"fonti": [info.source_file], "DOI": info.reference_doi})
-        with st.expander("📄 Tabella originale (formato del file NASA)"):
-            raw = store.raw_table(dataset)
-            st.dataframe(raw, width="stretch", hide_index=True, height=360)
-            download_buttons(raw, f"originale_{dataset}", "dash_raw", {"file sorgente": labels[dataset]})
+        if fig_ds.empty:
+            st.info("Nessuna figura tabellare disponibile per questo filtro.")
+        else:
+            labels = {r.dataset: f"{r.dataset} — {r.figure or ''} {('(' + r.journal + ' ' + str(r.year) + ')') if r.journal else ''}"
+                      for r in fig_ds.itertuples()}
+            c1, c2 = st.columns([3, 2])
+            inv = {v: k for k, v in labels.items()}
+            ss = st.session_state
+            target = ss.pop("explore_target", None)  # suggerimento dell'assistente da applicare
+            if target and target["dataset"] in labels:
+                ss.dash_ds = labels[target["dataset"]]
+            if ss.get("dash_ds") not in inv:
+                ss.pop("dash_ds", None)
+            dataset = inv[c1.selectbox("Dataset (figura)", list(inv), key="dash_ds")]
+            s_ds = series_f[series_f.dataset == dataset]
+
+            if s_ds.empty:
+                st.info("Nessuna serie misurata per questo dataset.")
+            else:
+                yvars = s_ds.y_var.value_counts().index.tolist()
+                ydesc = s_ds.drop_duplicates("y_var").set_index("y_var").y_description.to_dict()
+                ylab = {f"{v} — {ydesc.get(v, '')}": v for v in yvars}
+                if target and target["dataset"] == dataset and target["y_var"] in yvars:
+                    ss.dash_y = next(k for k, v in ylab.items() if v == target["y_var"])
+                if ss.get("dash_y") not in ylab:
+                    ss.pop("dash_y", None)
+                y_var = ylab[c2.selectbox("Grandezza (asse y)", list(ylab), key="dash_y")]
+                s_sel = s_ds[s_ds.y_var == y_var]
+                opts = s_sel.series_id.tolist()
+                fmt = s_sel.set_index("series_id").apply(
+                    lambda r: f"{r.name.split(':')[-1]} · {r.series_label} ({KIND_LABELS.get(r.kind, r.kind)}) · {r.n_points} pt", axis=1
+                ).to_dict()
+
+                c3, c4, c5 = st.columns([4, 1, 1])
+                slab = {fmt[o]: o for o in opts}
+                if target and target["dataset"] == dataset and target["y_var"] == y_var:
+                    ss.dash_sel = [fmt[i] for i in target["series_ids"] if i in fmt][:8]
+                    ss.dash_logx, ss.dash_logy = target["log_x"], target["log_y"]
+                    st.success("🔬 Vista impostata dal suggerimento dell'assistente.")
+                elif ss.get("dash_sel_ctx") != (dataset, y_var) or "dash_sel" not in ss:
+                    ss.dash_sel = list(slab)[:8]  # nuova figura/grandezza: selezione predefinita
+                ss.dash_sel_ctx = (dataset, y_var)
+                ss.dash_sel = [x for x in ss.dash_sel if x in slab]
+                chosen = [slab[x] for x in c3.multiselect("Serie", list(slab), max_selections=8, key="dash_sel")]
+                log_x = c4.toggle("log x", key="dash_logx")
+                log_y = c5.toggle("log y", key="dash_logy")
+                
+                if chosen:
+                    pts = points_f[points_f.series_id.isin(chosen)]
+                    if not pts.empty:
+                        st.plotly_chart(series_chart(pts, log_x, log_y, title=f"{dataset}: {ydesc.get(y_var, y_var)}"),
+                                        width="stretch", key="dash_series")
+                        info = fig_ds.set_index("dataset").loc[dataset]
+                        st.caption(f"Fonte: `{info.source_file}` [{info.experiment_tag}]"
+                                   + (f" — {info.journal} {info.year}, {info.figure} · [DOI]({info.reference_doi})" if info.reference_doi else ""))
+                        
+                        unit = pts.y_unit.iloc[0] if pd.notna(pts.y_unit.iloc[0]) else ""
+                        m = st.columns(4)
+                        m[0].metric("Punti selezionati", len(pts))
+                        m[1].metric("y min", f"{pts.y.min():.4g} {unit}")
+                        m[2].metric("y max", f"{pts.y.max():.4g} {unit}")
+                        m[3].metric("y medio", f"{pts.y.mean():.4g} {unit}")
+                        
+                        with st.expander("📋 Tabella dei punti selezionati", expanded=False):
+                            cols = ["series_id", "series_label", "kind", "fuel", "pressure_atm", "d0_mm", "x_var", "x_unit", "x",
+                                    "y_var", "y_unit", "y", "source_file", "x_column", "y_column"]
+                            st.dataframe(pts[cols], width="stretch", hide_index=True, height=360)
+                            download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"fonti": [info.source_file], "DOI": info.reference_doi})
+                    else:
+                        st.warning("Nessun punto disponibile per le serie selezionate.")
+                        
+            with st.expander("📄 Tabella originale (formato del file NASA)"):
+                raw = store.raw_table(dataset)
+                st.dataframe(raw, width="stretch", hide_index=True, height=360)
+                download_buttons(raw, f"originale_{dataset}", "dash_raw", {"file sorgente": labels[dataset]})
 
 # ============================== REPORT ==============================
 with tab_docs:
-    exp_f = filt(store.experiments) if not store.experiments.empty else store.experiments
+    docs_f = filt(store.documents)
+    exp_f =filt(store.experiments) if not store.experiments.empty else store.experiments
     for e in exp_f.itertuples():
         if e.overview:
             st.markdown(f"<div class='card'><b>🧪 {e.experiment_tag}</b><br>{e.overview}</div>", unsafe_allow_html=True)
@@ -364,31 +412,12 @@ with tab_docs:
             st.caption(h.text[:500].replace("\n", " ") + "…")
     if doc_sel != "Tutti":
         n_pages = int(docs_f.set_index("file_name").loc[doc_sel, "n_pages"])
-        page = st.number_input("Pagina", 1, n_pages, 1)
+        page = st.number_input("Pagina", 1, n_pages, 1) if n_pages > 1 else 1
         row = index.read_pages(doc_sel, int(page), int(page))
+        
         if not row.empty:
             r = row.iloc[0]
             st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {doc_sel}, p. {page}]")
             st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
-# ============================== CATALOGO ==============================
-with tab_cat:
-    st.subheader("Dataset e figure")
-    show = ds_f.drop(columns=["raw_rows", "raw_columns"])
-    st.dataframe(show, hide_index=True, width="stretch",
-                 column_config={"reference_doi": st.column_config.LinkColumn("DOI"),
-                                "n_points": st.column_config.NumberColumn("Punti"),
-                                "n_series": st.column_config.NumberColumn("Serie")})
-    download_buttons(show, "catalogo_dataset", "cat_ds")
 
-    st.subheader("Catalogo delle serie")
-    kinv = {v: k for k, v in KIND_LABELS.items()}
-    kinds = [kinv[x] for x in st.multiselect("Tipo", list(kinv), default=list(kinv))]
-    scat = series_f[series_f.kind.isin(kinds)]
-    st.dataframe(scat, hide_index=True, width="stretch", height=380)
-    download_buttons(scat, "catalogo_serie", "cat_series")
-
-    st.subheader("Dataset completo (formato lungo)")
-    st.caption(f"{len(points_f):,} punti — una riga per punto (x, y) con serie, condizioni, unità e file sorgente.".replace(",", "."))
-    download_buttons(points_f, f"flame_in_freefall_punti_{tag or 'tutti'}", "cat_points",
-                     {"fonti": sorted(points_f.source_file.unique())})

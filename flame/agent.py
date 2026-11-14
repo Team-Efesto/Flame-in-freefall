@@ -115,6 +115,26 @@ TOOLS = [
             "required": ["dataset", "display"],
         },
     },
+    {
+        "name": "suggest_explorer",
+        "description": (
+            "Indica all'utente cosa guardare nella sezione 'Esplora le serie' della Dashboard dati: un dataset (figura), "
+            "la grandezza sull'asse y e le serie piu' utili per approfondire la risposta. Chiamalo UNA volta per "
+            "domanda, insieme alla risposta finale. Usa solo dataset, y_var e series_id presenti nel catalogo."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset": {"type": "string", "description": "Nome del dataset (colonna `dataset`), es. come nel catalogo."},
+                "y_var": {"type": "string", "description": "Codice canonico della grandezza (y_var) da selezionare."},
+                "series_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 8,
+                               "description": "series_id da selezionare (max 8, tutti con questo dataset e y_var)."},
+                "log_x": {"type": "boolean"},
+                "log_y": {"type": "boolean"},
+                "reason": {"type": "string", "description": "1-2 frasi: cosa osservare nel grafico e perche' e' utile per la domanda."},
+            },
+            "required": ["dataset", "y_var", "series_ids", "reason"],
+        },
+    },
 ]
 
 SYSTEM_TEMPLATE = """Sei l'assistente scientifico di "Flame in Freefall", piattaforma di analisi dei dati NASA Physical Science Informatics (PSI) sulla combustione in microgravita' (gocce isolate, cool flames, estinzione).
@@ -127,6 +147,7 @@ SYSTEM_TEMPLATE = """Sei l'assistente scientifico di "Flame in Freefall", piatta
 - Domande puramente teoriche o concettuali: rispondi dai report (`search_reports`, `read_report_pages`, `get_document_overview`) SENZA grafici o tabelle.
 - Domande di sintesi/panoramica: parti da `get_document_overview`: i risultati chiave li' riportati sono gia' estratti dal testo con le pagine e bastano per una sintesi. Usa `search_reports`/`read_report_pages` solo per verificare o approfondire punti specifici (al massimo 2-3 letture mirate), per contenere i token.
 - Se un dato richiesto non esiste (es. altri esperimenti PSI, velocita' di propagazione della fiamma al variare dell'O2), dichiaralo chiaramente e proponi l'analisi piu' vicina possibile con i dati disponibili. Non inventare mai valori.
+- Per OGNI domanda, insieme alla risposta finale, chiama `suggest_explorer` con il dataset, la grandezza (y_var) e le serie della sezione "Esplora le serie" che l'utente dovrebbe guardare per approfondire (anche per domande teoriche: scegli la figura piu' pertinente). Non ripetere il suggerimento nel testo: l'interfaccia lo mostra gia'. Salta solo se nessun dato tabellare e' minimamente pertinente.
 - I dati tabellari sono "figure data": valori digitalizzati/esportati dalle figure degli articoli citati (DOI nel catalogo); le serie di tipo model/simulation sono risultati numerici, non misure.
 
 # Citazioni (OBBLIGATORIE)
@@ -177,6 +198,8 @@ class TurnArtifacts:
     charts: list[ChartArtifact] = field(default_factory=list)
     doc_hits: dict[tuple, dict] = field(default_factory=dict)  # (file, page) -> info
     trace: list[dict] = field(default_factory=list)
+    explore: dict | None = None  # suggerimento principale del modello per "Esplora le serie"
+    explores: list[dict] = field(default_factory=list)  # guida per ogni figura/grandezza consultata
 
     @property
     def displayed_tables(self) -> list[ResultTable]:
@@ -271,7 +294,53 @@ class FlameAgent:
             rid = f"R{len(art.tables) + 1}"
             art.tables[rid] = ResultTable(rid, f"Tabella originale — {ds}", df, None, bool(args.get("display", True)))
             return f"result_id={rid}. " + _preview(df)
+        if name == "suggest_explorer":
+            s = self.store.series
+            ds = s[s.dataset == args["dataset"]]
+            if ds.empty:
+                raise ValueError(f"Dataset sconosciuto o senza serie: {args['dataset']}. Disponibili: {sorted(s.dataset.unique())}")
+            if ds[ds.y_var == args["y_var"]].empty:
+                raise ValueError(f"y_var '{args['y_var']}' non presente in {args['dataset']}. Disponibili: {sorted(ds.y_var.unique())}")
+            art.explore = self._explore(args["dataset"], args["y_var"], args.get("series_ids") or [],
+                                        bool(args.get("log_x")), bool(args.get("log_y")), args.get("reason", ""))
+            return f"Suggerimento registrato e mostrato all'utente ({len(art.explore['series_ids'])} serie)."
         raise ValueError(f"Strumento sconosciuto: {name}")
+
+    def _explore(self, dataset: str, y_var: str, series_ids: list[str], log_x: bool, log_y: bool, reason: str) -> dict:
+        """Suggerimento per 'Esplora le serie', con i testi esatti mostrati nei menu della dashboard."""
+        s, d = self.store.series, self.store.datasets
+        sel = s[(s.dataset == dataset) & (s.y_var == y_var)]
+        ids = [i for i in series_ids if i in set(sel.series_id)][:8] or sel.series_id.head(8).tolist()
+        info = d[d.dataset == dataset].iloc[0] if (d.dataset == dataset).any() else None
+        fig = (f"{info.figure or ''}" + (f" ({info.journal} {info.year})" if info is not None and info.journal else "")) if info is not None else ""
+        return {"dataset": dataset, "experiment_tag": str(sel.experiment_tag.iloc[0]), "figure": fig.strip(),
+                "y_var": y_var, "y_description": str(sel.y_description.iloc[0] or y_var),
+                "series_ids": ids, "series_labels": sel.set_index("series_id").loc[ids, "series_label"].tolist(),
+                "log_x": log_x, "log_y": log_y, "reason": reason}
+
+    def _consulted_explores(self, art: TurnArtifacts, limit: int = 5) -> list[dict]:
+        """Una guida per ogni (figura, grandezza) consultata: prima il suggerimento del modello, poi le serie
+        comparse nei risultati delle query e nelle tabelle originali richieste."""
+        s = self.store.series
+        ids, raw_ds = [], []
+        for t in art.tables.values():
+            if "series_id" in t.df.columns:
+                ids += t.df.series_id.dropna().astype(str).unique().tolist()
+            elif t.sql is None and t.title.startswith("Tabella originale — "):
+                raw_ds.append(t.title.removeprefix("Tabella originale — "))
+        ids = list(dict.fromkeys(ids))
+        hit = s[s.series_id.isin(ids)]
+        groups = list(hit.groupby(["dataset", "y_var"], sort=False).groups)
+        groups += [(d, s[s.dataset == d].y_var.value_counts().index[0]) for d in raw_ds if (s.dataset == d).any()]
+        out = [art.explore] if art.explore else []
+        seen = {(e["dataset"], e["y_var"]) for e in out}
+        for ds, yv in groups:
+            if (ds, yv) in seen or len(out) >= limit:
+                continue
+            seen.add((ds, yv))
+            chosen = [i for i in ids if i in set(hit[(hit.dataset == ds) & (hit.y_var == yv)].series_id)]
+            out.append(self._explore(ds, yv, chosen, False, False, "Dati consultati dall'assistente per questa risposta."))
+        return out
 
     @staticmethod
     def _describe(name: str, args: dict) -> str:
@@ -282,6 +351,7 @@ class FlameAgent:
             "read_report_pages": lambda: f"📖 Lettura {args.get('file_name', '')[:50]} pp. {args.get('start_page')}–{args.get('end_page')}",
             "get_document_overview": lambda: "🗂️ Sommari e indici dei report",
             "get_raw_table": lambda: f"📄 Tabella originale {args.get('dataset', '')}",
+            "suggest_explorer": lambda: f"🔬 Suggerimento per Esplora le serie: {args.get('dataset', '')}",
         }.get(name, lambda: name)()
 
     # ------------------------------------------------------------------ loop
@@ -294,6 +364,7 @@ class FlameAgent:
         usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
         extra = {"output_config": {"effort": self.effort}} if self.effort else {}
         response = None
+        last_text = ""  # testo scritto insieme all'ultima chiamata di strumenti (es. risposta + suggest_explorer)
         for _ in range(MAX_TOOL_ROUNDS):
             response = self.client.messages.create(
                 model=self.model, max_tokens=16000, system=self.system, tools=TOOLS, messages=messages, **extra)
@@ -301,6 +372,7 @@ class FlameAgent:
                 usage[k] += getattr(response.usage, k, 0) or 0
             if response.stop_reason != "tool_use":
                 break
+            last_text = "\n".join(b.text for b in response.content if b.type == "text").strip() or last_text
             messages.append({"role": "assistant", "content": response.content})
             results = []
             for block in response.content:
@@ -320,6 +392,9 @@ class FlameAgent:
             messages.append({"role": "user", "content": results})
         text = "\n".join(b.text for b in (response.content if response else []) if b.type == "text").strip()
         stop = response.stop_reason if response else None
+        if stop == "end_turn" and len(text) < 40 and len(last_text) > len(text):
+            text = (last_text + ("\n\n" + text if text else "")).strip()
+        art.explores = self._consulted_explores(art)
         if stop == "refusal":
             text = "⚠️ La richiesta non puo' essere elaborata dal modello. Prova a riformularla."
         elif stop == "tool_use":
