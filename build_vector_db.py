@@ -1,4 +1,4 @@
-"""Indicizzazione offline dei report PDF in ChromaDB (senza LangChain).
+"""Indicizzazione offline dei documenti (PDF, TXT, DOCX) in ChromaDB (senza LangChain).
 
 * Embeddings: all-MiniLM-L6-v2 via ONNX (chromadb DefaultEmbeddingFunction) - stessi vettori del
   modello sentence-transformers, ma senza torch: leggero e compatibile con Streamlit Community Cloud.
@@ -21,9 +21,44 @@ from flame.config import CHROMA_COLLECTION, RAW_PDF_SRC, VECTOR_DB_DIR, experime
 CHUNK_SIZE, CHUNK_OVERLAP = 1000, 200
 
 
+SUPPORTED_EXTS = (".pdf", ".txt", ".docx")
+
+
 def read_pdf_pages(pdf_path: Path) -> list[str]:
     from pypdf import PdfReader
     return [(p.extract_text() or "") for p in PdfReader(str(pdf_path)).pages]
+
+
+def read_txt_pages(txt_path: Path) -> list[str]:
+    """File di testo: un'unica 'pagina' (i TXT non hanno impaginazione)."""
+    raw = txt_path.read_bytes()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("cp1252", errors="replace")
+    return [text]
+
+
+def read_docx_pages(docx_path: Path) -> list[str]:
+    """DOCX: paragrafi e celle di tabella in ordine di comparsa; un'unica 'pagina'."""
+    from docx import Document
+    doc = Document(str(docx_path))
+    parts = [p.text for p in doc.paragraphs]
+    for table in doc.tables:
+        for row in table.rows:
+            parts.append(" | ".join(cell.text.strip() for cell in row.cells))
+    return ["\n".join(parts)]
+
+
+def read_document_pages(path: Path) -> list[str]:
+    ext = path.suffix.lower()
+    if ext == ".pdf":
+        return read_pdf_pages(path)
+    if ext == ".txt":
+        return read_txt_pages(path)
+    if ext == ".docx":
+        return read_docx_pages(path)
+    raise ValueError(f"Formato non supportato: {path.name}")
 
 
 def split_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
@@ -65,9 +100,9 @@ def main() -> int:
     args = ap.parse_args()
 
     pdf_dir = Path(args.pdf_dir)
-    pdfs = sorted(pdf_dir.glob("*.pdf"))
+    pdfs = sorted(p for p in pdf_dir.iterdir() if p.is_file() and p.suffix.lower() in SUPPORTED_EXTS)
     if not pdfs:
-        print(f"Nessun PDF trovato in {pdf_dir}")
+        print(f"Nessun documento (PDF/TXT/DOCX) trovato in {pdf_dir}")
         return 1
 
     import chromadb
@@ -84,7 +119,7 @@ def main() -> int:
 
     ids, docs, metas = [], [], []
     for pdf in pdfs:
-        pages = read_pdf_pages(pdf)
+        pages = read_document_pages(pdf)
         print(f"{pdf.name}: {len(pages)} pagine")
         for pno, text in enumerate(pages):
             for ci, chunk in enumerate(split_text(text)):
