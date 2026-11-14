@@ -24,13 +24,20 @@ def create_nasa_vector_db(pdf_folder_path, persist_dir):
 
     # 2. Arricchisce i metadati con codice PSI-XXX, nome file e numero di pagina
     for doc in documents:
-        nome_file = os.path.basename(doc.metadata.get("source", ""))
+        # Ricava il nome del file sorgente in modo sicuro dai metadati
+        source_path = doc.metadata.get("source", "")
+        nome_file = os.path.basename(source_path)
+        
+        # Estrae il tag PSI (es. PSI-117)
         match = re.search(r'(psi-\d+)', nome_file, re.IGNORECASE)
         tag_esperimento = match.group(1).upper() if match else "UNKNOWN"
         
         doc.metadata["file_name"] = nome_file
         doc.metadata["experiment_tag"] = tag_esperimento
-        doc.metadata["page_number"] = doc.metadata.get("page", 0) + 1
+        
+        # Gestione sicura del numero di pagina (supporta sia 'page' che 'page_number')
+        page_idx = doc.metadata.get("page", doc.metadata.get("page_number", 0))
+        doc.metadata["page_number"] = int(page_idx) + 1
 
     # 3. Divide i testi in blocchi (chunk)
     text_splitter = RecursiveCharacterTextSplitter(
