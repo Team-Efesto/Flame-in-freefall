@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-
-# Configurazione deterministica e precisione
+# Configurazione seed e precisione globale
 torch.manual_seed(42)
 np.random.seed(42)
 torch.set_default_dtype(torch.float32)
@@ -15,21 +14,15 @@ torch.set_default_dtype(torch.float32)
 # ==============================================================================
 class UnifiedFlamePhysics:
     G_EARTH = 9.81          # Accelerazione gravità terrestre [m/s^2]
-    G_MOON_RATIO = 0.160    # Rapporto gravità Lunare / Terrestre (Case 5 PDF: 0.16 g_e)
-    P_REF = 100.0           # Pressione di riferimento [kPa]
-    T_INF = 300.0           # Temperatura ambiente [K]
-    T_P_SIBAL = 620.0       # Temperatura pirolisi SIBAL [K]
-    T_P_PMMA = 650.0        # Temperatura pirolisi PMMA [K]
-    F_DERIS_EXPT = 4.76     # Coefficiente di fiamma sperimentale di de Ris (DOCX Sez. 2.2)
-    TAU_TRANS_MM = 5.19     # Spessore critico di transizione sottile-spesso a 1g [mm]
+    G_MOON_RATIO = 0.160    # Rapporto gravità Lunare / Terrestre (Case 5 PDF: 0.16 g_e)[cite: 3, 7]
+    P_REF = 100.0           # Pressione di riferimento [kPa][cite: 4]
+    T_INF = 300.0           # Temperatura ambiente [K][cite: 6]
+    T_P_SIBAL = 620.0       # Temperatura pirolisi SIBAL [K][cite: 6]
+    T_P_PMMA = 650.0        # Temperatura pirolisi PMMA [K][cite: 4]
 
     @staticmethod
-    def load_real_bass2_stats(zip_path="drive-download-20261114T201035Z-1-001.zip",
-                              csv_path="PSI-25_Experimental table_BASS-II.csv"):
-        """Estrae automaticamente i range reali dal CSV NASA PSI-25 se presente."""
-        if os.path.exists(zip_path) and not os.path.exists(csv_path):
-            with zipfile.ZipFile(zip_path, 'r') as z:
-                z.extract(csv_path, ".")
+    def load_real_bass2_stats(csv_path="PSI-25_Experimental table_BASS-II.csv"):
+        """Estrae i range reali dal CSV NASA PSI-25 se presente nella cartella."""
         if os.path.exists(csv_path):
             df = pd.read_csv(csv_path)
             o2_col = [c for c in df.columns if 'initial O2' in c][0]
@@ -42,13 +35,6 @@ class UnifiedFlamePhysics:
         """
         Calcola in modo totalmente vettorializzato (zero loop) tutte le grandezze fisiche
         per qualsiasi combinazione di input o batch di tensori NumPy.
-        
-        config_id:
-          1 = Serie GMT-T (T'ien): Tessuto SIBAL (Concorrente Ascendente, dim_mm = larghezza W [mm])
-          2 = Serie B (Bhattacharjee): Film PMMA sottile (Opposto/Discendente, dim_mm = spessore [mm])
-          3 = Serie M (Miller/Wichman): Lastra PMMA 1-5 mm (Opposto/Discendente, dim_mm = spessore [mm])
-          4 = Serie P (Fernandez-Pello): Cilindro PMMA (Opposto/Discendente, dim_mm = diametro d [mm])
-          5 = Serie O (Olson/Ferkul): Cilindro PMMA (Concorrente Ristagno Assiale, dim_mm = diametro d [mm])
         """
         g = np.asarray(g_ratio, dtype=np.float32)
         p = np.asarray(p_kpa, dtype=np.float32)
@@ -60,7 +46,7 @@ class UnifiedFlamePhysics:
         p_norm = p / cls.P_REF
         p18g = (p ** 1.8) * np.maximum(g, 1e-5)
         
-        # Numeri adimensionali (PDF Sez. 2.1 e DOCX Sez. 2.1)
+        # Numeri adimensionali e parametro di galleggiamento (PDF Sez. 2.1 e DOCX Sez. 2.1)
         gr = 6.9e6 * (p_norm ** 2) * g
         re = 393.0 * p_norm * (u / 10.0)
         gr_re2 = gr / (re ** 2 + 1e-6)
@@ -95,61 +81,51 @@ class UnifiedFlamePhysics:
         o2_factor = np.maximum(0.0, (o2 - 13.0) / (21.0 - 13.0)) ** 1.25
 
         # 4. Velocità di Propagazione V_f [mm/s] specifica per ogni Serie PI
-        # --- Config 1: SIBAL Concorrente Ascendente (PDF Fig. 12b + DOCX Tab. A.6) ---
-        w_factor = np.where(d < 16.0, 0.84, 1.0) # Correzione larghezza W=12mm vs W=22mm
-        vf_sibal_buoy = 0.00585 * p18g * o2_factor * w_factor * ((np.maximum(u, 1.0) / 10.0) ** 0.08) # [mm/s]
+        w_factor = np.where(d < 16.0, 0.84, 1.0)
+        vf_sibal_buoy = 0.00585 * p18g * o2_factor * w_factor * ((np.maximum(u, 1.0) / 10.0) ** 0.08)
         vf_sibal_micro = 1.85 * ((np.maximum(u, 0.5) / 10.0) ** 0.5) * (p_norm ** 0.5) * o2_factor * w_factor
         vf_cfg1 = f_buoy * vf_sibal_buoy + (1.0 - f_buoy) * vf_sibal_micro
 
-        # --- Config 2: Film Sottili PMMA 100-400 um (de Ris V_f = 2.20 mm/s a 100 um, DOCX Tab. A.1) ---
         tau_um = np.clip(d * 1000.0, 50.0, 1000.0)
         vf_b_thermal = 2.20 * (100.0 / tau_um) * (p_norm ** 0.25) * ((o2 / 20.9) ** 1.35)
         vf_b_micro = vf_b_thermal * np.tanh(np.maximum(u - 0.8, 0.0) / 3.5)
-        vf_b_buoy = vf_b_thermal * (0.88 + 0.12 * (g ** 0.20)) # Sulla Luna/Terra V_NC previene il quenching
+        vf_b_buoy = vf_b_thermal * (0.88 + 0.12 * (g ** 0.20))
         vf_cfg2 = f_buoy * vf_b_buoy + (1.0 - f_buoy) * vf_b_micro
 
-        # --- Config 3: Lastre PMMA Spesse 1-5 mm (Miller M1-M20, transizione 5.19 mm, DOCX Tab. A.4) ---
         thick_mm = np.clip(d, 0.8, 10.0)
         vf_m_0g = 0.115 * (thick_mm ** (-0.62)) * ((o2 / 20.5) ** 1.5) * ((np.clip(u, 1.0, 25.0) / 8.0) ** 0.25)
         vf_m_buoy = (0.155 * (thick_mm ** (-0.55)) + 0.015) * (g ** 0.15) * ((o2 / 20.5) ** 1.6)
         vf_cfg3 = f_buoy * vf_m_buoy + (1.0 - f_buoy) * vf_m_0g
 
-        # --- Config 4: Cilindri PMMA Opposto (Fernandez-Pello P1-P54, inversione a 19% O2, DOCX Tab. A.3) ---
         diam_mm = np.clip(d, 4.0, 20.0)
         vf_p_0g = 0.088 * ((6.35 / diam_mm) ** 0.85) * ((o2 / 21.0) ** 1.4) * np.exp(-((u - 3.5) / 8.0) ** 2)
-        # Sulla Luna e Terra: per O2 > 19% il galleggiamento accelera V_f; per O2 < 19% raffredda la fiamma
         buoy_o2_inv = 1.0 + 0.48 * (g ** 0.25) * np.tanh((o2 - 19.0) / 1.2)
         vf_p_buoy = 0.095 * ((6.35 / diam_mm) ** 0.85) * ((o2 / 21.0) ** 1.5) * buoy_o2_inv
         vf_cfg4 = f_buoy * vf_p_buoy + (1.0 - f_buoy) * vf_p_0g
 
-        # --- Config 5: Cilindri PMMA Concorrente Ristagno (Olson O1-O24, DOCX Tab. A.2/A.5) ---
         r_cm = np.clip(d / 20.0, 0.15, 1.5)
-        a_stretch = 1.5 * v_eff / r_cm # Tasso di stiramento [s^-1]
+        a_stretch = 1.5 * v_eff / r_cm
         vf_o_base = 0.092 * ((0.318 / r_cm) ** 0.7) * ((a_stretch / 35.0) ** 0.32) * ((o2 / 21.0) ** 1.4)
         vf_cfg5 = vf_o_base * np.exp(-np.maximum(0.0, a_stretch - 140.0) / 120.0)
 
         vf_raw = np.select([cfg == 1, cfg == 2, cfg == 3, cfg == 4, cfg == 5],
                            [vf_cfg1, vf_cfg2, vf_cfg3, vf_cfg4, vf_cfg5], default=vf_cfg1) * t_corr
 
-        # 5. Limiti di Infiammabilità (LOC), Quenching a Basso Flusso e Blowoff (DOCX Sez. 2.3 e 4)
-        # Il LOC cresce con la velocità di galleggiamento U_b ~ g^0.5:
-        # Sulla Luna (0.16g, U_b = 40% della Terra) il LOC è intermedio tra ISS (0g) e Terra (1g)
+        # 5. Limiti di Infiammabilità (LOC), Quenching e Blowoff
         g_sqrt = np.sqrt(np.clip(g, 0.0, 1.5))
         loc_o2 = np.select(
             [cfg == 1, cfg == 2, cfg == 3, cfg == 4, cfg == 5],
             [
-                16.2 - 0.4 * (1.0 - g_sqrt),                       # SIBAL ascendente
-                16.0 + 1.4 * g_sqrt,                               # Film PMMA (16.0% 0g -> 17.4% 1g per blowoff)
-                16.8 + 1.2 * g_sqrt,                               # Lastre spesse M (16.8% 0g -> 18.0% 1g)
-                17.0 + (1.0 + 0.5 * (d > 10.0)) * g_sqrt,          # Cilindri P (17.0% 0g -> 18.0-18.5% 1g)
-                13.6 + 2.4 * g_sqrt                                # Cilindri O (13.6% 0g -> 14.56% Luna -> 16.0% 1g)
+                16.2 - 0.4 * (1.0 - g_sqrt),
+                16.0 + 1.4 * g_sqrt,
+                16.8 + 1.2 * g_sqrt,
+                17.0 + (1.0 + 0.5 * (d > 10.0)) * g_sqrt,
+                13.6 + 2.4 * g_sqrt
             ],
             default=16.5
         )
 
-        # Soglia di Quenching radiativo (solo se velocità efficace totale scende sotto ~1-2.5 cm/s, assente su Luna/Terra)
         quench_mask = (v_eff < 2.2) | ((p18g < 280.0) & (g > 0.01))
-        # Soglia di Blowoff aerodinamico
         blowoff_v = np.select(
             [cfg == 1, cfg == 2, cfg == 3, cfg == 4, cfg == 5],
             [65.0 + 15.0 * g_sqrt, 45.0 / (0.6 + 0.4 * g_sqrt), 85.0, 310.0, 55.0 + 20.0 * (o2 - 16.0)],
@@ -160,28 +136,26 @@ class UnifiedFlamePhysics:
         active_flame = (~quench_mask) & (~blowoff_mask)
         vf_final = np.where(active_flame, np.maximum(0.005, vf_raw), 0.0)
 
-        # 6. Flusso Termico Netto [W/m^2 scalato Fig. 14 PDF], Angolo Conico alpha [°] e Rapporto CO/CO2
-        t_flame_boost = 1.0 + 0.045 * (1.0 - p_norm) # Minore inerzia termica a bassa pressione (PDF Sez. 3.5)
+        # 6. Flusso Termico Netto, Angolo Conico alpha e Rapporto CO/CO2
+        t_flame_boost = 1.0 + 0.045 * (1.0 - p_norm)
         q_fc = 2.65 * (4.8 / delta_f_mm) * t_flame_boost * ((o2 / 21.0) ** 1.1)
         q_fr = 0.35 * (p_norm ** 0.65) * ((o2 / 21.0) ** 1.1)
         q_rs = 1.35 * (p_norm ** 0.08) * (np.maximum(g, 0.01) ** 0.04)
         q_net = np.where(active_flame, np.maximum(0.10, q_fc + q_fr - q_rs), 0.0)
 
-        # Angolo di regressione conica alpha [gradi] (DOCX Sez. 2.3: <5° in 0g, ~22-26° in 1g/Luna, 90° a >100 cm/s)
         alpha_deg = np.where(
             ~active_flame, 90.0,
             np.clip(3.5 + 18.5 * f_buoy + 0.65 * np.maximum(0.0, v_eff - 30.0), 3.0, 90.0)
         )
 
-        # Rapporto molare CO / CO2 (DOCX Sez. 2.3: 0.01-0.10 in 0g a coda aperta; ridotto di ~8-10x in pennacchio chiuso)
         co_co2_0g = np.clip(0.018 + 0.012 * (21.0 - o2), 0.010, 0.100)
-        co_co2_buoy = co_co2_0g * (0.12 + 0.15 * np.exp(-3.0 * g)) # Pennacchio chiuso su Luna e Terra ossida il CO
+        co_co2_buoy = co_co2_0g * (0.12 + 0.15 * np.exp(-3.0 * g))
         co_co2_ratio = np.where(active_flame, (1.0 - f_buoy) * co_co2_0g + f_buoy * co_co2_buoy, 0.0)
 
         return np.column_stack([vf_final, delta_f_mm, v_eff, q_net, alpha_deg, co_co2_ratio, loc_o2, gr_re2])
 
 # ==============================================================================
-# 2. ARCHITETTURA PINN MULTI-CONFIGURAZIONE E TRAINING SENZA LOOP INUTILI
+# 2. ARCHITETTURA PINN CON CONVERSIONE FORZATA IN FLOAT32 (Risolve l'errore Double/Float)
 # ==============================================================================
 class MultiRegimeLunarPINN(nn.Module):
     def __init__(self, x_mean, x_std, y_scale):
@@ -202,6 +176,8 @@ class MultiRegimeLunarPINN(nn.Module):
         )
 
     def forward(self, x):
+        # Converte esplicitamente in float32 per evitare incompatibilità di tipo (Double vs Float)
+        x = x.float()
         x_norm = (x - self.x_mean) / (self.x_std + 1e-8)
         return self.net(x_norm) * self.y_scale
 
@@ -209,7 +185,6 @@ def train_unified_pinn(n_samples=2500):
     phys = UnifiedFlamePhysics
     o2_min_csv, o2_max_csv, n_csv = phys.load_real_bass2_stats()
 
-    # Generazione vettorializzata del dominio: 25% Microgravità (ISS), 40% Luna (0.16g), 35% Gravità Parziale/Terra
     n_ug = int(n_samples * 0.25)
     n_moon = int(n_samples * 0.40)
     n_earth = n_samples - n_ug - n_moon
@@ -224,7 +199,6 @@ def train_unified_pinn(n_samples=2500):
     u_all = np.random.uniform(0.4, 55.0, size=n_samples)
     o2_all = np.random.uniform(o2_min_csv, o2_max_csv + 1.5, size=n_samples)
     
-    # Dimensioni realistiche per ciascuna configurazione [mm]
     dim_all = np.select(
         [cfg_all == 1, cfg_all == 2, cfg_all == 3, cfg_all == 4, cfg_all == 5],
         [
@@ -240,13 +214,12 @@ def train_unified_pinn(n_samples=2500):
     out_all = phys.evaluate_exact_physics(cfg_all, g_all, p_all, u_all, o2_all, dim_all)
     gr_re2_log = np.log10(out_all[:, 7] + 1e-6)
 
-    # Input: [config_id, g_ratio, p_kPa, u_forced, o2_pct, dim_mm, log10(Gr/Re^2)]
     X_np = np.column_stack([cfg_all, g_all, p_all, u_all, o2_all, dim_all, gr_re2_log])
-    # Output della rete: [V_f, delta_f_mm, V_eff, q_net, alpha_deg, co_co2_ratio]
     Y_np = out_all[:, :6]
 
-    X_t = torch.tensor(X_np)
-    Y_t = torch.tensor(Y_np)
+    # Conversione esplicita in torch.float32
+    X_t = torch.tensor(X_np, dtype=torch.float32)
+    Y_t = torch.tensor(Y_np, dtype=torch.float32)
 
     x_mean = X_t.mean(dim=0)
     x_std = X_t.std(dim=0)
@@ -256,7 +229,6 @@ def train_unified_pinn(n_samples=2500):
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.01, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=600)
 
-    # Maschera per isolare i punti Lunari e imporre la Physics-Informed Loss specifica a 0.16 g_e
     lunar_mask = (X_t[:, 1] >= 0.14) & (X_t[:, 1] <= 0.19)
 
     model.train()
@@ -274,7 +246,7 @@ def train_unified_pinn(n_samples=2500):
     return model, n_csv
 
 # ==============================================================================
-# 3. INTERFACCIA INTERATTIVA UTENTE E STAMPA OUTPUT COMPLETO
+# 3. INTERFACCIA INTERATTIVA E STAMPA OUTPUT COMPLETO
 # ==============================================================================
 def run_interactive_lunar_lab():
     print("Addestramento e calibrazione PINN sui dataset NASA BASS-II (PSI-25) e CFD in corso...")
@@ -320,7 +292,6 @@ def run_interactive_lunar_lab():
     except ValueError:
         cfg_id, dim_val, p_val, u_val, o2_val, t_val = 1, 22.0, 100.0, 5.0, 20.9, 300.0
 
-    # Calcolo simultaneo per i 3 ambienti: LUNA (0.16g), TERRA (1.0g), ISS MICROGRAVITÀ (10^-4g)
     g_vec = np.array([phys.G_MOON_RATIO, 1.000, 1e-4], dtype=np.float32)
     cfg_vec = np.full(3, cfg_id, dtype=np.int32)
     p_vec = np.full(3, p_val, dtype=np.float32)
@@ -329,16 +300,20 @@ def run_interactive_lunar_lab():
     d_vec = np.full(3, dim_val, dtype=np.float32)
 
     exact_res = phys.evaluate_exact_physics(cfg_vec, g_vec, p_vec, u_vec, o2_vec, d_vec, t_val)
-    X_query = torch.tensor(np.column_stack([cfg_vec, g_vec, p_vec, u_vec, o2_vec, d_vec, np.log10(exact_res[:, 7] + 1e-6)]))
+    
+    # Creazione esplicita del tensore di query in float32 per evitare errori di tipo
+    X_query = torch.tensor(
+        np.column_stack([cfg_vec, g_vec, p_vec, u_vec, o2_vec, d_vec, np.log10(exact_res[:, 7] + 1e-6)]),
+        dtype=torch.float32
+    )
 
     with torch.no_grad():
         pinn_preds = model(X_query).numpy()
 
-    # Fusione Fisica-Neurale (garantisce il rispetto rigoroso delle soglie di spegnimento LOC/Blowoff)
     active_mask = (exact_res[:, 0:1] > 0.0).astype(np.float32)
     final_res = (0.35 * pinn_preds + 0.65 * exact_res[:, :6]) * active_mask
-    final_res[:, 1] = exact_res[:, 1] # Standoff geometrico
-    final_res[:, 2] = exact_res[:, 2] # Velocità efficace esatta
+    final_res[:, 1] = exact_res[:, 1]
+    final_res[:, 2] = exact_res[:, 2]
     final_res[:, 4] = np.where(active_mask[:, 0] > 0, final_res[:, 4], 90.0)
 
     moon, earth, iss = final_res[0], final_res[1], final_res[2]
@@ -373,7 +348,7 @@ def run_interactive_lunar_lab():
     print(f" • STATO SULLA ISS  : {stato_fiamma(iss[0], iss[2], o2_val, loc_iss)}")
     print("-" * 88)
     print(f" • SIMILITUDINE IPORBARICA (Scaling p¹.⁸g = {p18g_lunar:.1f} kPa¹.⁸g_e):")
-    print(f"   Per replicare questo test lunare in laboratorio sulla Terra (1g), depressurizza a P = {p_eq_terra:.1f} kPa.")
+    print(f"   Per replicare questo test lunare in laboratorio sulla Terra (1g), depressurizza a P = {p_eq_earth:.1f} kPa.")
     print("=" * 88)
 
 if __name__ == "__main__":
