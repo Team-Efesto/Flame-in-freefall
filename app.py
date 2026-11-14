@@ -106,6 +106,15 @@ def xlsx_bytes(df: pd.DataFrame, title: str, meta_json: str) -> bytes:
     return to_xlsx_bytes(df, title, json.loads(meta_json))
 
 
+def lazy_download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
+    """Per tabelle grandi: CSV/Excel generati solo su richiesta, non ad ogni rerun."""
+    flag = f"prep_{key}"
+    if st.button(f"Prepara download ({len(df):,} righe)".replace(",", "."), key=f"{key}_prep"):
+        st.session_state[flag] = True
+    if st.session_state.get(flag):
+        download_buttons(df, title, key, meta)
+
+
 def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
     c1, c2, _ = st.columns([1, 1, 3])
     c1.download_button("⬇️ CSV", csv_bytes(df), safe_filename(title, "csv"), "text/csv",

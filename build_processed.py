@@ -44,7 +44,13 @@ def load_source_tables() -> dict[str, pd.DataFrame]:
     tables: dict[str, pd.DataFrame] = {}
     if RAW_TABLES_SRC.exists():
         for p in sorted(list(RAW_TABLES_SRC.glob("*.csv")) + list(RAW_TABLES_SRC.glob("*.xlsx"))):
-            tables[p.name] = pd.read_csv(p, low_memory=False) if p.suffix == ".csv" else pd.read_excel(p)
+            if p.suffix.lower() == ".csv":
+                try:
+                    tables[p.name] = pd.read_csv(p, low_memory=False, encoding="utf-8")
+                except UnicodeDecodeError:
+                    tables[p.name] = pd.read_csv(p, low_memory=False, encoding="cp1252")
+            else:
+                tables[p.name] = pd.read_excel(p)
         print(f"Tabelle lette da {RAW_TABLES_SRC}: {len(tables)}")
         return tables
     data = json.loads(LEGACY_JSON.read_text(encoding="utf-8"))
