@@ -1,0 +1,10 @@
+[theme]
+base = "dark"
+primaryColor = "#FF6B2C"
+backgroundColor = "#0B0F1A"
+secondaryBackgroundColor = "#141A2B"
+textColor = "#E8ECF4"
+borderColor = "#232B42"
+baseRadius = "10px"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap"

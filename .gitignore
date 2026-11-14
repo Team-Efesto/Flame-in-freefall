@@ -1,6 +1,6 @@
 .venv/
 __pycache__/
 .env
-.streamlit/
+.streamlit/secrets.toml
 dati_nasa_raw
 venv/
