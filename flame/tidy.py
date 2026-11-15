@@ -42,6 +42,11 @@ QUANTITY_RULES: list[tuple[str, str, str, str]] = [
     (r"^dext_(hot|hf)", "extinction_diameter_hot_flame", "mm", "Diametro di estinzione della fiamma calda (hot flame)"),
 ]
 
+# Grandezze che non si misurano direttamente sulla goccia: esistono solo come risultato di un calcolo.
+COMPUTED_ONLY = {"max_temperature", "tmax_position_ratio", "oh_max_position_ratio"}
+MAX_LABEL_VALUES = 6     # una colonna-etichetta ha pochi valori distinti; oltre e' una colonna di dati testuali
+MAX_LABEL_ITEMS, MAX_LABEL_CHARS = 6, 120
+
 X_PATTERN = re.compile(r"^(t|time)\b|^t/|^(p|pressure)(\s*\(atm\))?$|^do(\s*\(mm\))?$", re.IGNORECASE)
 FUEL_CODES = {"7": "n-heptane", "10": "n-decane", "12": "n-dodecane"}
 JOURNALS = {"PROCI": "Proceedings of the Combustion Institute", "MST": "Microgravity Science and Technology"}
@@ -91,7 +96,8 @@ def _col_kind(s: pd.Series) -> str:
     if n_text == 0:
         return "numeric"
     if n_text >= len(nn) * 0.5 or len(nn) <= 5:
-        return "label"
+        # molti valori testuali distinti (orari, messaggi di log, ID di test): dati, non un'etichetta di serie
+        return "text" if nn.astype(str).str.strip().nunique() > MAX_LABEL_VALUES else "label"
     return "numeric"
 
 
@@ -130,6 +136,8 @@ def split_series(df: pd.DataFrame) -> list[_Block]:
     for col in df.columns:
         k = _col_kind(df[col])
         b = base_name(col)
+        if k == "text":  # colonna di dati testuali: non e' una serie numerica e non etichetta le serie vicine
+            continue
         if k == "empty":
             close()
             if is_unnamed(col):
@@ -153,7 +161,7 @@ def split_series(df: pd.DataFrame) -> list[_Block]:
             if not is_unnamed(col):
                 context.append(b)
             for v in df[col].dropna().astype(str).str.strip():
-                if v and v not in context and not v.replace(".", "").isdigit():
+                if v and len(v) <= 40 and v not in context and not v.replace(".", "").isdigit():
                     context.append(v)
             kind = _kind_from_tokens(context, kind)
             last_was_label = True
@@ -202,22 +210,34 @@ def tidy_table(source_file: str, df: pd.DataFrame, figure: dict | None = None):
     ds = dataset_name(source_file)
     series_rows, frames = [], []
     blocks = split_series(df)
-    has_model = any(b.kind in ("model", "simulation") for b in blocks)
+    # il file contiene modelli/simulazioni, dichiarati da un'etichetta o dal nome della colonna (es. "Dext_CF_Model")
+    has_model = any(b.kind in ("model", "simulation") for b in blocks) or any(
+        _kind_from_tokens([re.sub(r"[_\-]", " ", base_name(c))], "unspecified") in ("model", "simulation")
+        for b in blocks for c in b.cols[1:])
+    # tabella che non riproduce la figura di un articolo (log, matrici di test, misure di volo): dati sperimentali
+    paper_figure = bool(figure.get("figure")) or bool(publication(ds)[0])
     for i, blk in enumerate(blocks, start=1):
         x_col, y_cols = blk.cols[0], blk.cols[1:]
         cond = _conditions(blk.context)
         fuel = cond.get("fuel") or (figure.get("fuel") if figure.get("fuel") and "," not in str(figure.get("fuel")) else None)
         pressure = cond.get("pressure_atm", _single_number(figure.get("pressure_atm")))
         d0 = cond.get("d0_mm", _single_number(figure.get("d0_mm")))
-        label = " · ".join(blk.context) if blk.context else blk.kind
+        label = " · ".join(blk.context[:MAX_LABEL_ITEMS])[:MAX_LABEL_CHARS]
         xq, xu, xd = quantity(x_col)
+        computed_block = any(quantity(c)[0] in COMPUTED_ONLY for c in y_cols)
         for j, y_col in enumerate(y_cols, start=1):
             yq, yu, yd = quantity(y_col)
             kind, inferred = blk.kind, False
             if kind == "unspecified":
                 kind = _kind_from_tokens([re.sub(r"[_\-]", " ", base_name(y_col))], kind)
-                if kind == "unspecified" and has_model:
-                    kind, inferred = "experiment", True
+            if kind == "unspecified":
+                inferred = True
+                if computed_block:          # es. T_max, posizione del massimo di OH: solo da simulazione
+                    kind = "simulation"
+                elif has_model or not paper_figure:
+                    kind = "experiment"
+                else:
+                    inferred = False
             pts = pd.DataFrame({
                 "x": pd.to_numeric(df[x_col], errors="coerce"),
                 "y": pd.to_numeric(df[y_col], errors="coerce"),
@@ -227,7 +247,7 @@ def tidy_table(source_file: str, df: pd.DataFrame, figure: dict | None = None):
             sid = f"{ds}:{i:02d}{'' if len(y_cols) == 1 else chr(96 + j)}"
             meta = {
                 "series_id": sid, "experiment_tag": tag, "dataset": ds, "source_file": source_file,
-                "series_label": label if label != "unspecified" else kind, "kind": kind,
+                "series_label": label or base_name(y_col)[:MAX_LABEL_CHARS], "kind": kind,
                 "kind_inferred": inferred, "fuel": fuel,
                 "pressure_atm": pressure, "d0_mm": d0,
                 "x_var": xq, "x_unit": xu, "x_column": str(x_col),

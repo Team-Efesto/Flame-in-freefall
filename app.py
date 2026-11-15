@@ -15,7 +15,14 @@ st.set_page_config(page_title="Flame in Freefall - NASA PSI", page_icon="🔥", 
 
 ALL = "Tutti gli esperimenti"
 KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
-TAB_CHAT, TAB_DASH, TAB_DOCS = "💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici"
+TAB_CHAT, TAB_DASH, TAB_DOCS, TAB_SIM = "💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici", "🧪 Simulatore & test"
+SIM_CONFIGS = [
+    "Tessuto SIBAL (75% cotone/25% vetro) - Flusso Concorrente Ascendente (T'ien, GMT-T)",
+    "Film sottile PMMA (100-400 um) - Flusso Opposto Discendente (Bhattacharjee, B)",
+    "Lastra spessa PMMA (1-5 mm) - Flusso Opposto Discendente (Miller, M)",
+    "Cilindro PMMA (6.35-12.7 mm) - Flusso Opposto Discendente (Fernandez-Pello, P)",
+    "Cilindro PMMA (6.35-12.7 mm) - Ristagno Concorrente Assiale (Olson/Ferkul, 0)",
+]
 
 # --------------------------------------------------------------------------- stile
 st.markdown("""
@@ -46,6 +53,8 @@ div[data-testid="stChatInput"] > div { border-radius: 14px; border-color: #2E385
 div[data-testid="stChatInput"] > div:focus-within { border-color: #FF6B2C; box-shadow: 0 0 0 3px rgba(255,107,44,0.18); }
 div[data-testid="stMetric"] { border: 1px solid #232B42; border-radius: 12px; background: rgba(20,26,43,0.6); padding: 0.8rem 1rem; }
 div[data-testid="stMetricValue"] { color: #FFD3A8; }
+.st-key-kpi_row { margin-bottom: 1.6rem; }
+.st-key-kpi_row div[data-testid="stMetric"] { border-top: 2px solid #FF6B2C; }
 .card { border: 1px solid #232B42; border-radius: 12px; background: rgba(20,26,43,0.6); padding: 1rem 1.2rem; margin-bottom: 0.8rem; }
 .pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; border: 1px solid #2E3856; color: #A9B3C9; font-size: 0.78rem; margin: 0 0.3rem 0.3rem 0; }
 .page-text { white-space: pre-wrap; font-size: 0.88rem; color: #C9D1E3; max-height: 520px; overflow-y: auto;
@@ -53,6 +62,18 @@ div[data-testid="stMetricValue"] { color: #FFD3A8; }
 hr { border-color: #232B42 !important; }
 code { color: #FFB27D !important; background: rgba(255,107,44,0.10) !important; border-radius: 6px; }
 #MainMenu, footer { visibility: hidden; }
+/* indicatore di caricamento: icone spaziali al posto degli omini di Streamlit */
+[data-testid="stStatusWidgetRunningManIcon"], [data-testid="stStatusWidgetNewYearsIcon"] { display: none !important; }
+[data-testid="stStatusWidgetRunningIcon"] { display: inline-flex; align-items: center; justify-content: center; }
+[data-testid="stStatusWidgetRunningIcon"]::after {
+    content: "🚀"; font-size: 1.35rem; line-height: 1; display: inline-block;
+    animation: space-icons 4.8s steps(1, end) infinite, space-float 1.2s ease-in-out infinite;
+}
+@keyframes space-icons {
+    0%    { content: "🚀"; }  12.5% { content: "🛰️"; } 25%   { content: "🧑‍🚀"; } 37.5% { content: "🪐"; }
+    50%   { content: "☄️"; }  62.5% { content: "🌍"; }  75%   { content: "🌙"; }  87.5% { content: "🔭"; }
+}
+@keyframes space-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,6 +86,8 @@ st.markdown("""
   NASA PSI per analizzare limiti di estinzione, pressioni e diluenti, con grafici e fonti verificate.</p>
 </div>
 """, unsafe_allow_html=True)
+# segnaposto subito sotto il banner: qui compaiono i pulsanti delle sezioni (definiti piu' avanti, dopo i callback)
+nav_slot = st.container()
 
 
 # --------------------------------------------------------------------------- risorse
@@ -232,11 +255,17 @@ def to_message(result) -> dict:
 st.session_state.setdefault("panel_open", False)
 
 
-def toggle_panel():
-    st.session_state.panel_open = not st.session_state.panel_open
+def open_panel(tab: str):
+    st.session_state.main_tab = tab
+    st.session_state.panel_open = True
+
+
+def close_panel():
+    st.session_state.panel_open = False
 
 
 # Il pannello e' sempre renderizzato (cosi' grafici e selezioni restano pronti) ma, se chiuso, viene spostato fuori schermo.
+# Da aperto, uno sfondo cliccabile copre la chat: un clic fuori dal pannello lo chiude.
 st.markdown(f"""
 <style>
 .st-key-chat_area {{ max-width: 1000px; margin: 0 auto; }}
@@ -249,20 +278,72 @@ div[data-testid="stBottom"] > div {{ background: #0B0F1A; }}
     transition: transform 0.25s ease, visibility 0.25s;
     {"" if st.session_state.panel_open else "transform: translateX(105%); visibility: hidden;"}
 }}
-.st-key-panel_open_btn {{ position: fixed; top: 4.2rem; right: 1.2rem; z-index: 999989; width: auto !important; }}
-.st-key-panel_open_btn button {{ box-shadow: 0 6px 20px rgba(0,0,0,0.45); border-color: #FF6B2C; }}
-@media (max-width: 900px) {{ .st-key-side_panel {{ width: 100vw; padding: 4rem 16px 2rem 16px; }} }}
+.st-key-panel_launchers {{ margin: -0.2rem 0 1.4rem 0; }}
+.st-key-panel_launchers button {{
+    background: rgba(20,26,43,0.92); border: 1px solid #2E3856; border-radius: 12px; padding: 0.7rem 1rem; font-size: 1.02rem;
+}}
+.st-key-panel_launchers button:hover {{ border-color: #FF6B2C; color: #FF9A5C; }}
+.st-key-panel_backdrop {{ position: fixed; inset: 0; z-index: 999980; }}
+.st-key-panel_backdrop button {{
+    position: fixed; inset: 0; width: 100vw; height: 100vh; min-height: 100vh; border: none; border-radius: 0;
+    background: rgba(5,8,15,0.55); color: transparent; cursor: pointer; box-shadow: none;
+}}
+.st-key-panel_backdrop button:hover, .st-key-panel_backdrop button:focus, .st-key-panel_backdrop button:active {{
+    background: rgba(5,8,15,0.55); color: transparent; border: none; box-shadow: none;
+}}
+.st-key-panel_close_btn button {{ border: none; background: transparent; font-size: 1.3rem; padding: 0 0.5rem; }}
+.st-key-panel_close_btn button:hover {{ color: #FF6B2C; }}
+@media (max-width: 900px) {{
+    .st-key-side_panel {{ width: 100vw; padding: 4rem 16px 2rem 16px; }}
+}}
 </style>
 """, unsafe_allow_html=True)
 
-if not st.session_state.panel_open:
-    with st.container(key="panel_open_btn"):
-        st.button("📊 Dashboard dati e report", on_click=toggle_panel, type="primary")
+if st.session_state.panel_open:
+    with st.container(key="panel_backdrop"):
+        st.button("Chiudi pannello", key="panel_backdrop_btn", on_click=close_panel)
+
+# pulsanti delle sezioni subito sotto il banner principale
+with nav_slot:
+    with st.container(key="panel_launchers", horizontal=True, gap="medium"):
+        st.button(TAB_DASH, key="open_dash_btn", on_click=open_panel, args=(TAB_DASH,), width="stretch")
+        st.button(TAB_DOCS, key="open_docs_btn", on_click=open_panel, args=(TAB_DOCS,), width="stretch")
+        st.button(TAB_SIM, key="open_sim_btn", on_click=open_panel, args=(TAB_SIM,), width="stretch")
 
 # ============================== ASSISTENTE ==============================
 # chat_input al livello principale: Streamlit lo fissa in fondo allo schermo, indipendente dallo scorrimento.
 query = st.chat_input("Es: confronta il diametro di estinzione sperimentale e simulato al variare della pressione",
                       disabled=not api_key)
+
+@st.cache_resource(show_spinner=False)
+def dataset_kpis(_store: DataStore) -> dict:
+    """Numeri di sintesi calcolati dal dataset caricato (non valori fissi)."""
+    p = _store.points
+    # pressione ambiente di prova: condizioni delle serie e assi di pressione (non le pressioni delle linee di bordo)
+    amb = pd.concat([_store.series.pressure_atm, p.loc[p.x_var == "pressure", "x"]]).dropna()
+    return {"experiments": len(_store.experiment_tags), "exp_points": int((p.kind == "experiment").sum()),
+            "all_points": len(p), "reports": len(_store.documents), "pages": int(_store.documents.n_pages.sum()),
+            "p_min": float(amb.min()) if len(amb) else None, "p_max": float(amb.max()) if len(amb) else None}
+
+
+def it_num(n: float) -> str:
+    return f"{n:,.0f}".replace(",", ".")
+
+
+def it_dec(x: float) -> str:
+    return f"{x:g}".replace(".", ",")
+
+
+kpi = dataset_kpis(store)
+with st.container(key="kpi_row"):
+    k = st.columns(4)
+    k[0].metric("Esperimenti NASA PSI", kpi["experiments"], help="Codici PSI distinti con dati o report caricati.")
+    k[1].metric("Punti sperimentali", it_num(kpi["exp_points"]),
+                help=f"Misure di tipo esperimento, su {it_num(kpi['all_points'])} punti totali (esperimenti, modelli e simulazioni).")
+    k[2].metric("Report tecnici indicizzati", kpi["reports"], help=f"{it_num(kpi['pages'])} pagine consultabili dall'assistente.")
+    if kpi["p_min"] is not None:
+        k[3].metric("Range di pressione", f"{it_dec(kpi['p_min'])}–{it_dec(kpi['p_max'])} atm",
+                    help=f"Pressione ambiente delle prove (≈ {it_num(kpi['p_min'] * 101.325)}–{it_num(kpi['p_max'] * 101.325)} kPa).")
 
 with st.container(key="chat_area"):
     st.subheader(TAB_CHAT)
@@ -320,10 +401,10 @@ with st.container(key="chat_area"):
 # ============================== PANNELLO LATERALE ==============================
 side_panel = st.container(key="side_panel")
 with side_panel:
-    h1, h2 = st.columns([4, 1], vertical_alignment="center")
+    h1, h2 = st.columns([6, 1], vertical_alignment="center")
     h1.markdown("#### 🔬 Dati e report")
-    h2.button("✕ Chiudi", key="panel_close_btn", on_click=toggle_panel, width="stretch")
-    tab_dash, tab_docs = st.tabs([TAB_DASH, TAB_DOCS], key="main_tab", on_change="rerun")
+    h2.button("✕", key="panel_close_btn", on_click=close_panel, help="Chiudi il pannello")
+    tab_dash, tab_docs, tab_sim = st.tabs([TAB_DASH, TAB_DOCS, TAB_SIM], key="main_tab", on_change="rerun")
 
 # ============================== DASHBOARD ==============================
 with tab_dash:
@@ -460,4 +541,32 @@ with tab_docs:
             st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {doc_sel}, p. {page}]")
             st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
+# ============================== SIMULATORE & TEST ==============================
+with tab_sim:
+    st.subheader("🧪 Simulatore & test")
+    sim_conf = st.selectbox("Scelta configurazione", SIM_CONFIGS, index=None, key="sim_config",
+                            format_func=lambda c: f"{SIM_CONFIGS.index(c) + 1}. {c}",
+                            placeholder="Seleziona una configurazione")
+    sim_w = st.number_input("Larghezza W [mm]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                            placeholder="Inserisci la larghezza del campione", key="sim_w")
+    sim_p = st.number_input("Pressione ambiente P [kPa]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                            placeholder="Inserisci la pressione ambiente", key="sim_p")
+    sim_u = st.number_input("Velocità ventola imposta U_forced [cm/s]", min_value=0.0, value=None, step=0.5, format="%.2f",
+                            placeholder="Inserisci la velocità del flusso forzato", key="sim_u")
+    sim_o2 = st.number_input("Concentrazione ossigeno O₂ [% vol]", min_value=0.0, max_value=100.0, value=None, step=0.5,
+                             format="%.2f", placeholder="Inserisci la concentrazione di ossigeno", key="sim_o2")
+    sim_t0 = st.number_input("Temperatura iniziale T0 [K]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                             placeholder="Inserisci la temperatura iniziale", key="sim_t0")
 
+    if st.button("▶️ Avvia simulazione", key="sim_run", type="primary", width="stretch"):
+        sim_inputs = {"Configurazione": sim_conf, "Larghezza W [mm]": sim_w, "Pressione ambiente P [kPa]": sim_p,
+                      "Velocità ventola U_forced [cm/s]": sim_u, "Ossigeno O₂ [% vol]": sim_o2,
+                      "Temperatura iniziale T0 [K]": sim_t0}
+        missing = [k for k, v in sim_inputs.items() if v is None]
+        if missing:
+            st.warning("Compila tutti gli input prima di avviare la simulazione. Mancano: " + ", ".join(missing) + ".")
+        else:
+            st.success("Simulazione avviata con questi parametri:")
+            st.dataframe(pd.DataFrame({"Parametro": list(sim_inputs), "Valore": [str(v) for v in sim_inputs.values()]}),
+                         hide_index=True, width="stretch")
+            st.info("Il modello di calcolo del simulatore non è ancora collegato.")
