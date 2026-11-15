@@ -172,6 +172,21 @@ header[data-testid="stHeader"] { background: transparent; }
 }
 
 /* Custom Feature & Step Cards */
+/* Dark panel behind each dashboard tab: the starry background stays visible around it */
+.st-key-agent_panel, .st-key-data_panel, .st-key-psi_panel, .st-key-mph_panel,
+.st-key-reports_panel, .st-key-safety_panel {
+    background: rgba(15, 26, 44, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 18px;
+    padding: 1.6rem 1.8rem 1.8rem;
+    box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(3px);
+}
+@media (max-width: 760px) {
+    .st-key-agent_panel, .st-key-data_panel, .st-key-psi_panel, .st-key-mph_panel,
+    .st-key-reports_panel, .st-key-safety_panel { padding: 1rem; }
+}
+
 .feat-card {
     background: #111827;
     border: 1px solid #1e293b;
@@ -870,324 +885,330 @@ def render_dashboard():
     # TAB 1: CO-PILOTA IA (Ambiente dedicato esclusivamente all'assistente)
     # -----------------------------------------------------------------------
     with tab_agent:
-        st.markdown("#### EFESTO AI Engineering Co-pilot")
-        st.caption("A dedicated space for conversational queries on NASA PSI physical data and scientific documentation. "
-                   "It writes sandboxed SQL queries, generates Plotly charts and cites report pages.")
+        with st.container(key="agent_panel"):
+            st.markdown("#### EFESTO AI Engineering Co-pilot")
+            st.caption("A dedicated space for conversational queries on NASA PSI physical data and scientific documentation. "
+                       "It writes sandboxed SQL queries, generates Plotly charts and cites report pages.")
 
-        c_chat_head1, c_chat_head2 = st.columns([5, 1.8], vertical_alignment="center")
-        with c_chat_head1:
-            st.markdown(f"**Active experiment for the agent:** `{selected_tag}`")
-        with c_chat_head2:
-            if st.button("New conversation", key="agent_tab_clear_chat", width="stretch"):
-                st.session_state.messages, st.session_state.api_history = [], []
-                st.rerun()
+            c_chat_head1, c_chat_head2 = st.columns([5, 1.8], vertical_alignment="center")
+            with c_chat_head1:
+                st.markdown(f"**Active experiment for the agent:** `{selected_tag}`")
+            with c_chat_head2:
+                if st.button("New conversation", key="agent_tab_clear_chat", width="stretch"):
+                    st.session_state.messages, st.session_state.api_history = [], []
+                    st.rerun()
 
-        chat_box = st.container()
-        with chat_box:
-            if not st.session_state.messages:
-                st.info("**Co-pilot ready.** Try asking:\n"
-                        "- *'Compare the experimental and simulated extinction diameter for heptane as pressure varies'*\n"
-                        "- *'Explain the cool flame phenomenon observed in microgravity'* \n"
-                        "- *'What are the NASA-STD safety limits for the oxygen fraction?'*")
-            for i, m in enumerate(st.session_state.messages):
-                with st.chat_message(m["role"]):
-                    if m["role"] == "assistant":
-                        render_assistant(m, f"m{i}")
-                    else:
-                        st.markdown(m["content"])
-
-        if not api_key:
-            st.warning("`ANTHROPIC_API_KEY` not found in `st.secrets`: the AI assistant is disabled. The simulators, experimental series and reports are still available.")
-
-        query = st.chat_input("Ask the AI assistant a question (e.g. compare the experimental and simulated extinction diameter)", disabled=not api_key)
-
-        if query and api_key:
-            agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
-                               effort=secret("ANTHROPIC_EFFORT"), safety=safety, safety_index=safety_index)
-            st.session_state.messages.append({"role": "user", "content": query})
+            chat_box = st.container()
             with chat_box:
-                with st.chat_message("user"):
-                    st.markdown(query)
-                with st.chat_message("assistant"):
-                    with st.status("EFESTO is analyzing the NASA data and preparing the answer…", expanded=True) as status:
-                        try:
-                            result = agent.run(st.session_state.api_history, query, tag, on_event=status.write)
-                            status.update(label="Analysis complete", state="complete", expanded=False)
-                        except anthropic.AuthenticationError:
-                            status.update(label="Invalid API key", state="error")
-                            result = None
-                        except anthropic.RateLimitError:
-                            status.update(label="Rate limit reached: try again shortly", state="error")
-                            result = None
-                        except anthropic.APIConnectionError:
-                            status.update(label="Connection error with the Anthropic API", state="error")
-                            result = None
-                        except anthropic.APIStatusError as e:
-                            status.update(label=f"API error ({e.status_code})", state="error")
-                            result = None
+                if not st.session_state.messages:
+                    st.info("**Co-pilot ready.** Try asking:\n"
+                            "- *'Compare the experimental and simulated extinction diameter for heptane as pressure varies'*\n"
+                            "- *'Explain the cool flame phenomenon observed in microgravity'* \n"
+                            "- *'What are the NASA-STD safety limits for the oxygen fraction?'*")
+                for i, m in enumerate(st.session_state.messages):
+                    with st.chat_message(m["role"]):
+                        if m["role"] == "assistant":
+                            render_assistant(m, f"m{i}")
+                        else:
+                            st.markdown(m["content"])
 
-                    if result is not None:
-                        msg = to_message(result)
-                        render_assistant(msg, f"m{len(st.session_state.messages)}")
-                        st.session_state.messages.append(msg)
-                        st.session_state.api_history += [{"role": "user", "content": query},
-                                                         {"role": "assistant", "content": FlameAgent.history_entry(result)}]
-                        first = next((g for g in msg["explores"] if tag in (None, g["experiment_tag"])), None)
-                        if first:
-                            st.session_state.explore_target = first
-                    else:
-                        st.session_state.messages.pop()
+            if not api_key:
+                st.warning("`ANTHROPIC_API_KEY` not found in `st.secrets`: the AI assistant is disabled. The simulators, experimental series and reports are still available.")
+
+            query = st.chat_input("Ask the AI assistant a question (e.g. compare the experimental and simulated extinction diameter)", disabled=not api_key)
+
+            if query and api_key:
+                agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
+                                   effort=secret("ANTHROPIC_EFFORT"), safety=safety, safety_index=safety_index)
+                st.session_state.messages.append({"role": "user", "content": query})
+                with chat_box:
+                    with st.chat_message("user"):
+                        st.markdown(query)
+                    with st.chat_message("assistant"):
+                        with st.status("EFESTO is analyzing the NASA data and preparing the answer…", expanded=True) as status:
+                            try:
+                                result = agent.run(st.session_state.api_history, query, tag, on_event=status.write)
+                                status.update(label="Analysis complete", state="complete", expanded=False)
+                            except anthropic.AuthenticationError:
+                                status.update(label="Invalid API key", state="error")
+                                result = None
+                            except anthropic.RateLimitError:
+                                status.update(label="Rate limit reached: try again shortly", state="error")
+                                result = None
+                            except anthropic.APIConnectionError:
+                                status.update(label="Connection error with the Anthropic API", state="error")
+                                result = None
+                            except anthropic.APIStatusError as e:
+                                status.update(label=f"API error ({e.status_code})", state="error")
+                                result = None
+
+                        if result is not None:
+                            msg = to_message(result)
+                            render_assistant(msg, f"m{len(st.session_state.messages)}")
+                            st.session_state.messages.append(msg)
+                            st.session_state.api_history += [{"role": "user", "content": query},
+                                                             {"role": "assistant", "content": FlameAgent.history_entry(result)}]
+                            first = next((g for g in msg["explores"] if tag in (None, g["experiment_tag"])), None)
+                            if first:
+                                st.session_state.explore_target = first
+                        else:
+                            st.session_state.messages.pop()
 
     # -----------------------------------------------------------------------
     # TAB 2: DATI & SERIE SPERIMENTALI (Ambiente grafici ed esplorazione)
     # -----------------------------------------------------------------------
     with tab_data:
-        st.markdown("#### NASA PSI Experimental Data & Series")
-        st.caption("A dedicated space for visual analysis of historical series, multivariable comparison and data export.")
+        with st.container(key="data_panel"):
+            st.markdown("#### NASA PSI Experimental Data & Series")
+            st.caption("A dedicated space for visual analysis of historical series, multivariable comparison and data export.")
 
-        if ds_f.empty:
-            st.info("No datasets available for the selected filter.")
-        else:
-            series_count_by_ds = series_f.groupby("dataset").size().to_dict() if not series_f.empty else {}
-
-            def format_dataset_label(r):
-                n_ser = series_count_by_ds.get(r.dataset, 0)
-                tag_label = f" [{n_ser} series]" if n_ser > 0 else " [metadata/images]"
-                fig_str = f" · {r.figure}" if pd.notna(r.figure) and r.figure else ""
-                pub_str = f" ({r.journal} {r.year})" if pd.notna(r.journal) and r.journal else ""
-                return f"{r.dataset}{fig_str}{pub_str}{tag_label}"
-
-            labels = {r.dataset: format_dataset_label(r) for r in ds_f.itertuples()}
-            inv = {v: k for k, v in labels.items()}
-
-            target = st.session_state.pop("explore_target", None)
-            if target and target["dataset"] in labels:
-                st.session_state.dash_ds = labels[target["dataset"]]
-            if st.session_state.get("dash_ds") not in inv:
-                st.session_state.pop("dash_ds", None)
-
-            c1, c2 = st.columns([3, 2])
-            chosen_label = c1.selectbox("Select a dataset to explore", list(inv), key="dash_ds")
-            dataset = inv[chosen_label]
-            s_ds = series_f[series_f.dataset == dataset] if not series_f.empty else pd.DataFrame()
-
-            if s_ds.empty:
-                st.info("**Metadata / photo archive / test log dataset (e.g. SAFFIRE-III sequences).**\n\n"
-                        "This file contains metadata, calibration logs and space image sequences without plottable scalar x/y series. "
-                        "You can still browse or download the full original table below as CSV or Excel.")
+            if ds_f.empty:
+                st.info("No datasets available for the selected filter.")
             else:
-                yvars = s_ds.y_var.value_counts().index.tolist()
-                ydesc = s_ds.drop_duplicates("y_var").set_index("y_var").y_description.to_dict()
-                ylab = {f"{v} — {ydesc.get(v, '')}": v for v in yvars}
-                if target and target["dataset"] == dataset and target["y_var"] in yvars:
-                    st.session_state.dash_y = next(k for k, v in ylab.items() if v == target["y_var"])
-                if st.session_state.get("dash_y") not in ylab:
-                    st.session_state.pop("dash_y", None)
-                y_var = ylab[c2.selectbox("Measured quantity (y axis)", list(ylab), key="dash_y")]
-                s_sel = s_ds[s_ds.y_var == y_var]
-                opts = s_sel.series_id.tolist()
-                fmt = s_sel.set_index("series_id").apply(
-                    lambda r: f"{r.name.split(':')[-1]} · {r.series_label} ({KIND_LABELS.get(r.kind, r.kind)}) · {r.n_points} pt", axis=1
-                ).to_dict()
+                series_count_by_ds = series_f.groupby("dataset").size().to_dict() if not series_f.empty else {}
 
-                c3, c4, c5 = st.columns([4, 1, 1])
-                slab = {fmt[o]: o for o in opts}
-                if target and target["dataset"] == dataset and target["y_var"] == y_var:
-                    st.session_state.dash_sel = [fmt[i] for i in target["series_ids"] if i in fmt][:8]
-                    st.session_state.dash_logx, st.session_state.dash_logy = target["log_x"], target["log_y"]
-                    st.success("View set automatically from the AI assistant's suggestion.")
-                elif st.session_state.get("dash_sel_ctx") != (dataset, y_var) or "dash_sel" not in st.session_state:
-                    st.session_state.dash_sel = list(slab)[:8]
-                st.session_state.dash_sel_ctx = (dataset, y_var)
-                st.session_state.dash_sel = [x for x in st.session_state.dash_sel if x in slab]
-                chosen = [slab[x] for x in c3.multiselect("Series to display", list(slab), max_selections=8, key="dash_sel")]
-                log_x = c4.toggle("log x", key="dash_logx")
-                log_y = c5.toggle("log y", key="dash_logy")
+                def format_dataset_label(r):
+                    n_ser = series_count_by_ds.get(r.dataset, 0)
+                    tag_label = f" [{n_ser} series]" if n_ser > 0 else " [metadata/images]"
+                    fig_str = f" · {r.figure}" if pd.notna(r.figure) and r.figure else ""
+                    pub_str = f" ({r.journal} {r.year})" if pd.notna(r.journal) and r.journal else ""
+                    return f"{r.dataset}{fig_str}{pub_str}{tag_label}"
 
-                if chosen:
-                    pts = points_f[points_f.series_id.isin(chosen)]
-                    if not pts.empty:
-                        st.plotly_chart(series_chart(pts, log_x, log_y, title=f"{dataset}: {ydesc.get(y_var, y_var)}"),
-                                        width="stretch", key="dash_series")
-                        info = ds_f.set_index("dataset").loc[dataset]
-                        st.caption(f"Source: `{info.source_file}` [{info.experiment_tag}]"
-                                   + (f" — {info.journal} {info.year}, {info.figure} · [DOI]({info.reference_doi})" if info.reference_doi else ""))
+                labels = {r.dataset: format_dataset_label(r) for r in ds_f.itertuples()}
+                inv = {v: k for k, v in labels.items()}
 
-                        unit = pts.y_unit.iloc[0] if pd.notna(pts.y_unit.iloc[0]) else ""
-                        m = st.columns(4)
-                        m[0].metric("Selected points", len(pts))
-                        m[1].metric("y min", f"{pts.y.min():.4g} {unit}")
-                        m[2].metric("y max", f"{pts.y.max():.4g} {unit}")
-                        m[3].metric("y mean", f"{pts.y.mean():.4g} {unit}")
+                target = st.session_state.pop("explore_target", None)
+                if target and target["dataset"] in labels:
+                    st.session_state.dash_ds = labels[target["dataset"]]
+                if st.session_state.get("dash_ds") not in inv:
+                    st.session_state.pop("dash_ds", None)
 
-                        with st.expander("Selected points table", expanded=False):
-                            cols = ["series_id", "series_label", "kind", "fuel", "pressure_atm", "d0_mm", "x_var", "x_unit", "x",
-                                    "y_var", "y_unit", "y", "source_file", "x_column", "y_column"]
-                            st.dataframe(pts[cols], width="stretch", hide_index=True, height=360)
-                            download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"sources": [info.source_file], "DOI": info.reference_doi})
-                    else:
-                        st.warning("No points available for the selected series.")
+                c1, c2 = st.columns([3, 2])
+                chosen_label = c1.selectbox("Select a dataset to explore", list(inv), key="dash_ds")
+                dataset = inv[chosen_label]
+                s_ds = series_f[series_f.dataset == dataset] if not series_f.empty else pd.DataFrame()
 
-            with st.expander("Full original table (NASA format, CSV / Excel download)"):
-                raw = store.raw_table(dataset)
-                st.dataframe(raw, width="stretch", hide_index=True, height=360)
-                download_buttons(raw, f"original_{dataset}", "dash_raw", {"source file": labels[dataset]})
+                if s_ds.empty:
+                    st.info("**Metadata / photo archive / test log dataset (e.g. SAFFIRE-III sequences).**\n\n"
+                            "This file contains metadata, calibration logs and space image sequences without plottable scalar x/y series. "
+                            "You can still browse or download the full original table below as CSV or Excel.")
+                else:
+                    yvars = s_ds.y_var.value_counts().index.tolist()
+                    ydesc = s_ds.drop_duplicates("y_var").set_index("y_var").y_description.to_dict()
+                    ylab = {f"{v} — {ydesc.get(v, '')}": v for v in yvars}
+                    if target and target["dataset"] == dataset and target["y_var"] in yvars:
+                        st.session_state.dash_y = next(k for k, v in ylab.items() if v == target["y_var"])
+                    if st.session_state.get("dash_y") not in ylab:
+                        st.session_state.pop("dash_y", None)
+                    y_var = ylab[c2.selectbox("Measured quantity (y axis)", list(ylab), key="dash_y")]
+                    s_sel = s_ds[s_ds.y_var == y_var]
+                    opts = s_sel.series_id.tolist()
+                    fmt = s_sel.set_index("series_id").apply(
+                        lambda r: f"{r.name.split(':')[-1]} · {r.series_label} ({KIND_LABELS.get(r.kind, r.kind)}) · {r.n_points} pt", axis=1
+                    ).to_dict()
+
+                    c3, c4, c5 = st.columns([4, 1, 1])
+                    slab = {fmt[o]: o for o in opts}
+                    if target and target["dataset"] == dataset and target["y_var"] == y_var:
+                        st.session_state.dash_sel = [fmt[i] for i in target["series_ids"] if i in fmt][:8]
+                        st.session_state.dash_logx, st.session_state.dash_logy = target["log_x"], target["log_y"]
+                        st.success("View set automatically from the AI assistant's suggestion.")
+                    elif st.session_state.get("dash_sel_ctx") != (dataset, y_var) or "dash_sel" not in st.session_state:
+                        st.session_state.dash_sel = list(slab)[:8]
+                    st.session_state.dash_sel_ctx = (dataset, y_var)
+                    st.session_state.dash_sel = [x for x in st.session_state.dash_sel if x in slab]
+                    chosen = [slab[x] for x in c3.multiselect("Series to display", list(slab), max_selections=8, key="dash_sel")]
+                    log_x = c4.toggle("log x", key="dash_logx")
+                    log_y = c5.toggle("log y", key="dash_logy")
+
+                    if chosen:
+                        pts = points_f[points_f.series_id.isin(chosen)]
+                        if not pts.empty:
+                            st.plotly_chart(series_chart(pts, log_x, log_y, title=f"{dataset}: {ydesc.get(y_var, y_var)}"),
+                                            width="stretch", key="dash_series")
+                            info = ds_f.set_index("dataset").loc[dataset]
+                            st.caption(f"Source: `{info.source_file}` [{info.experiment_tag}]"
+                                       + (f" — {info.journal} {info.year}, {info.figure} · [DOI]({info.reference_doi})" if info.reference_doi else ""))
+
+                            unit = pts.y_unit.iloc[0] if pd.notna(pts.y_unit.iloc[0]) else ""
+                            m = st.columns(4)
+                            m[0].metric("Selected points", len(pts))
+                            m[1].metric("y min", f"{pts.y.min():.4g} {unit}")
+                            m[2].metric("y max", f"{pts.y.max():.4g} {unit}")
+                            m[3].metric("y mean", f"{pts.y.mean():.4g} {unit}")
+
+                            with st.expander("Selected points table", expanded=False):
+                                cols = ["series_id", "series_label", "kind", "fuel", "pressure_atm", "d0_mm", "x_var", "x_unit", "x",
+                                        "y_var", "y_unit", "y", "source_file", "x_column", "y_column"]
+                                st.dataframe(pts[cols], width="stretch", hide_index=True, height=360)
+                                download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"sources": [info.source_file], "DOI": info.reference_doi})
+                        else:
+                            st.warning("No points available for the selected series.")
+
+                with st.expander("Full original table (NASA format, CSV / Excel download)"):
+                    raw = store.raw_table(dataset)
+                    st.dataframe(raw, width="stretch", hide_index=True, height=360)
+                    download_buttons(raw, f"original_{dataset}", "dash_raw", {"source file": labels[dataset]})
 
     # -----------------------------------------------------------------------
     # TAB 3: SIMULATORE PSI (Ambiente simulatore parametrico)
     # -----------------------------------------------------------------------
     with tab_psi:
-        html_clean("<h4>NASA PSI Laboratory • Interactive Maps & Parametric Simulations (g / g<sub>e</sub>)</h4>")
-        st.caption("Multi-experiment parametric simulator based on the Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
-        components.html(PSI_DASHBOARD_HTML, height=1150, scrolling=True)
+        with st.container(key="psi_panel"):
+            html_clean("<h4>NASA PSI Laboratory • Interactive Maps & Parametric Simulations (g / g<sub>e</sub>)</h4>")
+            st.caption("Multi-experiment parametric simulator based on the Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
+            components.html(PSI_DASHBOARD_HTML, height=1150, scrolling=True)
 
     # -----------------------------------------------------------------------
     # TAB 4: MODULO LUNARE MPH (Ambiente simulatore modulo lunare)
     # -----------------------------------------------------------------------
     with tab_mph:
-        html_clean("<h4>Artemis MPH • Fire Spread Simulator at Lunar Gravity (0.165 g<sub>e</sub>)</h4>")
-        st.caption("Multiphysics aerospace simulator for the pressurized lunar habitat module (Multi-Purpose Habitat).")
-        components.html(MPH_DASHBOARD_HTML, height=1150, scrolling=True)
+        with st.container(key="mph_panel"):
+            html_clean("<h4>Artemis MPH • Fire Spread Simulator at Lunar Gravity (0.165 g<sub>e</sub>)</h4>")
+            st.caption("Multiphysics aerospace simulator for the pressurized lunar habitat module (Multi-Purpose Habitat).")
+            components.html(MPH_DASHBOARD_HTML, height=1150, scrolling=True)
 
     # -----------------------------------------------------------------------
     # TAB 5: REPORT SCIENTIFICI PSI (Ambiente documentazione & ricerca)
     # -----------------------------------------------------------------------
     with tab_reports:
-        st.markdown("#### NASA PSI Scientific Reports")
-        st.caption("Browse the original publications, analytical summaries and semantic search (BM25 + Chroma) with a page viewer.")
+        with st.container(key="reports_panel"):
+            st.markdown("#### NASA PSI Scientific Reports")
+            st.caption("Browse the original publications, analytical summaries and semantic search (BM25 + Chroma) with a page viewer.")
 
-        docs_f = filt(store.documents)
-        exp_f = filt(store.experiments) if not store.experiments.empty else store.experiments
-        for e in exp_f.itertuples():
-            if e.overview:
-                st.markdown(f"<div class='card'><b>{e.experiment_tag}</b><br>{plain(e.overview)}</div>", unsafe_allow_html=True)
-        st.subheader("Documents & Publications")
-        for r in docs_f.itertuples():
-            with st.expander(f"{r.doc_type} · {plain(r.title)} — {r.n_pages} pages"):
-                st.caption(f"`{r.file_name}` · {r.experiment_tag}" + (f" · {plain(r.author)}" if r.author else "")
-                           + f" · summary {r.summary_source}")
-                st.markdown(plain(r.summary))
-                findings = json.loads(r.key_findings_json or "[]")
-                if findings:
-                    st.markdown("**Key findings**")
-                    for f in findings:
-                        st.markdown(f"- {plain(f['finding'])} _(pp. {', '.join(map(str, f['pages']))})_")
-                topics = json.loads(r.topics_json or "[]")
-                if topics:
-                    st.markdown("".join(f"<span class='pill'>{t}</span>" for t in topics), unsafe_allow_html=True)
-                if r.experimental_conditions:
-                    st.markdown(f"**Experimental conditions:** {plain(r.experimental_conditions)}")
-                outline = json.loads(r.outline_json or "[]")
-                if outline:
-                    st.markdown("**Table of contents**")
-                    st.dataframe(pd.DataFrame(outline).rename(columns={"section": "Section", "start_page": "Page"}),
-                                 hide_index=True, width="stretch", height=min(300, 38 + 35 * len(outline)))
+            docs_f = filt(store.documents)
+            exp_f = filt(store.experiments) if not store.experiments.empty else store.experiments
+            for e in exp_f.itertuples():
+                if e.overview:
+                    st.markdown(f"<div class='card'><b>{e.experiment_tag}</b><br>{plain(e.overview)}</div>", unsafe_allow_html=True)
+            st.subheader("Documents & Publications")
+            for r in docs_f.itertuples():
+                with st.expander(f"{r.doc_type} · {plain(r.title)} — {r.n_pages} pages"):
+                    st.caption(f"`{r.file_name}` · {r.experiment_tag}" + (f" · {plain(r.author)}" if r.author else "")
+                               + f" · summary {r.summary_source}")
+                    st.markdown(plain(r.summary))
+                    findings = json.loads(r.key_findings_json or "[]")
+                    if findings:
+                        st.markdown("**Key findings**")
+                        for f in findings:
+                            st.markdown(f"- {plain(f['finding'])} _(pp. {', '.join(map(str, f['pages']))})_")
+                    topics = json.loads(r.topics_json or "[]")
+                    if topics:
+                        st.markdown("".join(f"<span class='pill'>{t}</span>" for t in topics), unsafe_allow_html=True)
+                    if r.experimental_conditions:
+                        st.markdown(f"**Experimental conditions:** {plain(r.experimental_conditions)}")
+                    outline = json.loads(r.outline_json or "[]")
+                    if outline:
+                        st.markdown("**Table of contents**")
+                        st.dataframe(pd.DataFrame(outline).rename(columns={"section": "Section", "start_page": "Page"}),
+                                     hide_index=True, width="stretch", height=min(300, 38 + 35 * len(outline)))
 
-        st.subheader("Search and read the reports")
-        c1, c2 = st.columns([3, 2])
-        q = c1.text_input("Search the reports (semantic + keywords)", placeholder="cool flame extinction diameter", key="docs_q")
-        doc_opts = docs_f.file_name.tolist()
-        doc_sel = c2.selectbox("Specific document", ["All"] + doc_opts, key="docs_sel")
-        if q:
-            hits = index.search(q, experiment_tag=tag, file_name=None if doc_sel == "All" else doc_sel, top_k=8)
-            for h in hits:
-                st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
-                            + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
-                st.caption(h.text[:500].replace("\n", " ") + "…")
-        if doc_sel != "All":
-            n_pages = int(docs_f.set_index("file_name").loc[doc_sel, "n_pages"])
-            page = st.number_input("Page", 1, n_pages, 1, key="docs_page") if n_pages > 1 else 1
-            row = index.read_pages(doc_sel, int(page), int(page))
-            if not row.empty:
-                r = row.iloc[0]
-                st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {doc_sel}, p. {page}]")
-                st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
+            st.subheader("Search and read the reports")
+            c1, c2 = st.columns([3, 2])
+            q = c1.text_input("Search the reports (semantic + keywords)", placeholder="cool flame extinction diameter", key="docs_q")
+            doc_opts = docs_f.file_name.tolist()
+            doc_sel = c2.selectbox("Specific document", ["All"] + doc_opts, key="docs_sel")
+            if q:
+                hits = index.search(q, experiment_tag=tag, file_name=None if doc_sel == "All" else doc_sel, top_k=8)
+                for h in hits:
+                    st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
+                                + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
+                    st.caption(h.text[:500].replace("\n", " ") + "…")
+            if doc_sel != "All":
+                n_pages = int(docs_f.set_index("file_name").loc[doc_sel, "n_pages"])
+                page = st.number_input("Page", 1, n_pages, 1, key="docs_page") if n_pages > 1 else 1
+                row = index.read_pages(doc_sel, int(page), int(page))
+                if not row.empty:
+                    r = row.iloc[0]
+                    st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {doc_sel}, p. {page}]")
+                    st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------
     # TAB 6: NORME DI SICUREZZA NASA (Ambiente verifica standard astronautici)
     # -----------------------------------------------------------------------
     with tab_safety:
-        st.markdown("#### NASA-STD Safety Standards (3001 & 6001)")
-        st.caption("Automatic aerospace compliance checks: design limits, series verification and simulation file screening.")
+        with st.container(key="safety_panel"):
+            st.markdown("#### NASA-STD Safety Standards (3001 & 6001)")
+            st.caption("Automatic aerospace compliance checks: design limits, series verification and simulation file screening.")
 
-        def show_checks(res: pd.DataFrame, key: str, title: str):
-            if res.empty:
-                st.info("No quantity matches a limit in the catalog.")
-                return
-            view = res.assign(result=res.esito.map(ESITO_ICON).fillna(res.esito))
-            if "confronto" in view.columns:
-                view = view.rename(columns={"confronto": "comparison"})
-            cols = [c for c in ("result", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
-                                "value_min", "value_max", "n_violations", "worst_value", "margin", "comparison", "unit_note",
-                                "citation") if c in view.columns]
-            m = st.columns(3)
-            m[0].metric("Checks", len(res))
-            m[1].metric("Non-compliant", int(((res.esito == "non conforme")).sum()))
-            m[2].metric("In risk zone", int(((res.esito == "in zona di rischio")).sum()))
-            st.dataframe(view[cols], width="stretch", hide_index=True, height=min(420, 38 + 35 * len(view)))
-            download_buttons(view[cols], title, key, {"limits source": "data/safety/safety_limits.parquet"})
+            def show_checks(res: pd.DataFrame, key: str, title: str):
+                if res.empty:
+                    st.info("No quantity matches a limit in the catalog.")
+                    return
+                view = res.assign(result=res.esito.map(ESITO_ICON).fillna(res.esito))
+                if "confronto" in view.columns:
+                    view = view.rename(columns={"confronto": "comparison"})
+                cols = [c for c in ("result", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
+                                    "value_min", "value_max", "n_violations", "worst_value", "margin", "comparison", "unit_note",
+                                    "citation") if c in view.columns]
+                m = st.columns(3)
+                m[0].metric("Checks", len(res))
+                m[1].metric("Non-compliant", int(((res.esito == "non conforme")).sum()))
+                m[2].metric("In risk zone", int(((res.esito == "in zona di rischio")).sum()))
+                st.dataframe(view[cols], width="stretch", hide_index=True, height=min(420, 38 + 35 * len(view)))
+                download_buttons(view[cols], title, key, {"limits source": "data/safety/safety_limits.parquet"})
 
-        if safety is None:
-            st.warning("Safety standards database not available. Build it with `python build_safety_db.py`."
-                       + (f" \nDetails: {safety_error}" if safety_error else ""))
-        else:
-            st.subheader("Numerical Design Limits")
-            lim = safety.limits
-            lim_view = lim.assign(limit=[format_limit(r) for r in lim.itertuples()],
-                                  automatic=lim.get("applies_by_default", True))
-            st.dataframe(lim_view[["limit_id", "parameter", "limit", "limit_type", "scope", "automatic", "citation"]],
-                         width="stretch", hide_index=True, height=min(420, 38 + 35 * len(lim_view)))
-            with st.expander("Original text and notes for each limit"):
-                for r in lim.itertuples():
-                    st.markdown(f"**{r.limit_id}** — {r.description}")
-                    st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · value not stated numerically in the text"))
-            if not safety.requirements.empty:
-                with st.expander(f"NASA-STD-3001 Qualitative Requirements ({len(safety.requirements)})"):
-                    for r in safety.requirements.itertuples():
-                        st.markdown(f"**[{r.requirement_id}] {r.title}** — {r.text}")
-                        st.caption(r.citation)
+            if safety is None:
+                st.warning("Safety standards database not available. Build it with `python build_safety_db.py`."
+                           + (f" \nDetails: {safety_error}" if safety_error else ""))
+            else:
+                st.subheader("Numerical Design Limits")
+                lim = safety.limits
+                lim_view = lim.assign(limit=[format_limit(r) for r in lim.itertuples()],
+                                      automatic=lim.get("applies_by_default", True))
+                st.dataframe(lim_view[["limit_id", "parameter", "limit", "limit_type", "scope", "automatic", "citation"]],
+                             width="stretch", hide_index=True, height=min(420, 38 + 35 * len(lim_view)))
+                with st.expander("Original text and notes for each limit"):
+                    for r in lim.itertuples():
+                        st.markdown(f"**{r.limit_id}** — {r.description}")
+                        st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · value not stated numerically in the text"))
+                if not safety.requirements.empty:
+                    with st.expander(f"NASA-STD-3001 Qualitative Requirements ({len(safety.requirements)})"):
+                        for r in safety.requirements.itertuples():
+                            st.markdown(f"**[{r.requirement_id}] {r.title}** — {r.text}")
+                            st.caption(r.citation)
 
-            st.subheader("Verification of Stored Simulation Series")
-            c1, c2, c3 = st.columns([3, 1, 1])
-            kinds = c1.multiselect("Series types", list(KIND_LABELS), default=["simulation", "model"],
-                                   format_func=lambda k: KIND_LABELS.get(k, k), key="saf_kinds")
-            include_all = c2.toggle("Optional limits", key="saf_all", help="Include narrow-scope limits (inerted volumes, device capacities)")
-            allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Indicative comparisons with related quantities (e.g. flame_length vs burn_length)")
-            if kinds:
-                res = safety.check_store(store, kinds=kinds, include_all=include_all, allow_proxy=allow_proxy)
-                if tag is not None and not res.empty and "experiment_tag" in res:
-                    res = res[res.experiment_tag == tag]
-                show_checks(res, "saf_store", "standards_check_series")
+                st.subheader("Verification of Stored Simulation Series")
+                c1, c2, c3 = st.columns([3, 1, 1])
+                kinds = c1.multiselect("Series types", list(KIND_LABELS), default=["simulation", "model"],
+                                       format_func=lambda k: KIND_LABELS.get(k, k), key="saf_kinds")
+                include_all = c2.toggle("Optional limits", key="saf_all", help="Include narrow-scope limits (inerted volumes, device capacities)")
+                allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Indicative comparisons with related quantities (e.g. flame_length vs burn_length)")
+                if kinds:
+                    res = safety.check_store(store, kinds=kinds, include_all=include_all, allow_proxy=allow_proxy)
+                    if tag is not None and not res.empty and "experiment_tag" in res:
+                        res = res[res.experiment_tag == tag]
+                    show_checks(res, "saf_store", "standards_check_series")
 
-            st.markdown("**Check a user simulation file** (CSV or Excel)")
-            st.caption("Automatic column detection: `temperature_K`, `O2 [%]`, `x_o2`, `air_velocity_m_s`, `burn_length_mm`...")
-            up = st.file_uploader("Upload simulation file", type=["csv", "xlsx"], key="saf_upload")
-            if up is not None:
-                try:
-                    sim = pd.read_csv(up) if up.name.lower().endswith(".csv") else pd.read_excel(up)
-                    res = safety.check_any(sim, include_all=include_all, allow_proxy=allow_proxy)
-                    show_checks(res, "saf_upload_res", f"standards_check_{up.name.rsplit('.', 1)[0]}")
-                except Exception as e:
-                    st.error(f"Unable to check the file: {e}")
+                st.markdown("**Check a user simulation file** (CSV or Excel)")
+                st.caption("Automatic column detection: `temperature_K`, `O2 [%]`, `x_o2`, `air_velocity_m_s`, `burn_length_mm`...")
+                up = st.file_uploader("Upload simulation file", type=["csv", "xlsx"], key="saf_upload")
+                if up is not None:
+                    try:
+                        sim = pd.read_csv(up) if up.name.lower().endswith(".csv") else pd.read_excel(up)
+                        res = safety.check_any(sim, include_all=include_all, allow_proxy=allow_proxy)
+                        show_checks(res, "saf_upload_res", f"standards_check_{up.name.rsplit('.', 1)[0]}")
+                    except Exception as e:
+                        st.error(f"Unable to check the file: {e}")
 
-            st.subheader("Search and read the NASA-STD standards")
-            c1, c2 = st.columns([3, 2])
-            sq = c1.text_input("Search the standards (semantic + keywords)", placeholder="oxygen concentration flammability limit", key="saf_q")
-            sdocs = sorted(safety_index.pages.file_name.unique())
-            sdoc = c2.selectbox("Standard document", ["All"] + sdocs, key="saf_doc")
-            if sq:
-                for h in safety_index.search(sq, file_name=None if sdoc == "All" else sdoc, top_k=8):
-                    st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
-                                + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
-                    st.caption(h.text[:500].replace("\n", " ") + "…")
-            if sdoc != "All":
-                n_pages = int(safety_index.pages[safety_index.pages.file_name == sdoc].page_number.max())
-                page = st.number_input("Standard page", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
-                row = safety_index.read_pages(sdoc, int(page), int(page))
-                if not row.empty:
-                    r = row.iloc[0]
-                    st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {sdoc}, p. {page}]")
-                    st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
+                st.subheader("Search and read the NASA-STD standards")
+                c1, c2 = st.columns([3, 2])
+                sq = c1.text_input("Search the standards (semantic + keywords)", placeholder="oxygen concentration flammability limit", key="saf_q")
+                sdocs = sorted(safety_index.pages.file_name.unique())
+                sdoc = c2.selectbox("Standard document", ["All"] + sdocs, key="saf_doc")
+                if sq:
+                    for h in safety_index.search(sq, file_name=None if sdoc == "All" else sdoc, top_k=8):
+                        st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
+                                    + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
+                        st.caption(h.text[:500].replace("\n", " ") + "…")
+                if sdoc != "All":
+                    n_pages = int(safety_index.pages[safety_index.pages.file_name == sdoc].page_number.max())
+                    page = st.number_input("Standard page", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
+                    row = safety_index.read_pages(sdoc, int(page), int(page))
+                    if not row.empty:
+                        r = row.iloc[0]
+                        st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {sdoc}, p. {page}]")
+                        st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
 
 # ===========================================================================

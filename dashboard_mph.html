@@ -92,6 +92,14 @@
       border: 1px solid #1e293b;
       box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
     }
+
+    /* Scrollbar in the site's colors (night blue + slate thumb, sky accent on hover) */
+    html { scrollbar-color: #2b3b55 #0a1626; scrollbar-width: thin; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0a1626; }
+    ::-webkit-scrollbar-thumb { background: #2b3b55; border-radius: 8px; border: 2px solid #0a1626; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+    ::-webkit-scrollbar-corner { background: #0a1626; }
   </style>
 </head>
 <body class="lunar-grid min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
