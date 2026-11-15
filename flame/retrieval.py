@@ -67,7 +67,7 @@ class Hit:
         return f"[Fonte: {self.experiment_tag} | {self.file_name}, p. {self.page_number}]"
 
 
-def _open_collection(vector_dir: Path):
+def _open_collection(vector_dir: Path, collection: str = CHROMA_COLLECTION):
     """Apre Chroma su una copia temporanea: l'app non modifica mai i file versionati del repo."""
     import chromadb
     from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
@@ -75,11 +75,12 @@ def _open_collection(vector_dir: Path):
     tmp = Path(tempfile.mkdtemp(prefix="flame_vdb_"))
     shutil.copytree(vector_dir, tmp / "db")
     client = chromadb.PersistentClient(path=str(tmp / "db"))
-    return client.get_collection(CHROMA_COLLECTION, embedding_function=DefaultEmbeddingFunction())
+    return client.get_collection(collection, embedding_function=DefaultEmbeddingFunction())
 
 
 class ReportIndex:
-    def __init__(self, pages: pd.DataFrame, vector_dir: Path = VECTOR_DB_DIR, use_vectors: bool = True):
+    def __init__(self, pages: pd.DataFrame, vector_dir: Path = VECTOR_DB_DIR, use_vectors: bool = True,
+                 collection: str = CHROMA_COLLECTION):
         self.pages = pages.reset_index(drop=True)
         self.key_to_row = {(r.file_name, int(r.page_number)): i for i, r in enumerate(self.pages.itertuples())}
         self.bm25 = BM25([f"{r.title} {r.section} {r.text}" for r in self.pages.itertuples()])
@@ -87,7 +88,7 @@ class ReportIndex:
         self.vector_error = None
         if use_vectors:
             try:
-                self.collection = _open_collection(vector_dir)
+                self.collection = _open_collection(vector_dir, collection)
                 self.collection.query(query_texts=["warm-up"], n_results=1)  # scarica/carica il modello ONNX subito
             except Exception as e:  # il retrieval resta funzionante con il solo BM25
                 self.vector_error = str(e)

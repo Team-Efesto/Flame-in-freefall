@@ -15,6 +15,13 @@ LEGACY_JSON = DATA_DIR / "neural_network_dataset.json"
 RAW_TABLES_SRC = ROOT / "dati_nasa_raw" / "tabelle"
 RAW_PDF_SRC = ROOT / "dati_nasa_raw" / "report_pdf"
 
+# Norme / documenti di sicurezza antincendio spaziale: database separato dai report PSI
+SAFETY_PDF_SRC = ROOT / "data_nasa_raw" / "safety_pdf"   # PDF grezzi (non versionati)
+SAFETY_DIR = DATA_DIR / "safety"                         # artefatti tabellari (limiti, requisiti, pagine)
+SAFETY_VECTOR_DB_DIR = ROOT / "vector_db_safety"         # ChromaDB dedicato
+SAFETY_COLLECTION = "safety"
+SAFETY_TAG = "SAFETY"  # valore di experiment_tag per i documenti di sicurezza (stesso schema metadati dei PSI)
+
 CHROMA_COLLECTION = "langchain"  # nome storico della collezione, mantenuto per compatibilita'
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # stesso modello, servito via ONNX da chromadb
 
