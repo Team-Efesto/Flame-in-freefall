@@ -10,11 +10,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Palette categoriale di riferimento, varianti per superficie scura (validate CVD)
-PALETTE = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
-TEXT = "#E8ECF4"
-MUTED = "#A9B3C9"
-GRID = "rgba(169,179,201,0.14)"
+# Palette categoriale di riferimento NASA PSI
+PALETTE = ["#38bdf8", "#f59e0b", "#10b981", "#ef4444", "#a855f7", "#22d3ee", "#fbbf24", "#f43f5e"]
+TEXT = "#e2e8f0"
+MUTED = "#94a3b8"
+GRID = "#1e293b"
 MAX_COLORS = len(PALETTE)
 
 CHART_TYPES = ("line", "scatter", "line+markers", "bar", "box", "histogram")
@@ -23,16 +23,16 @@ CHART_TYPES = ("line", "scatter", "line+markers", "bar", "box", "histogram")
 def style(fig: go.Figure, title: str | None = None, height: int = 460) -> go.Figure:
     fig.update_layout(
         template="plotly_dark", height=height,
-        title=dict(text=title or "", font=dict(size=16, color=TEXT), x=0, xanchor="left"),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="'Times New Roman', Tinos, Times, serif", color=MUTED, size=13),
-        legend=dict(orientation="h", yanchor="top", y=-0.16, x=0, title_text="", font=dict(color=TEXT)),
+        title=dict(text=title or "", font=dict(size=15, color=TEXT, family="'Inter', sans-serif"), x=0, xanchor="left"),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#0b1120",
+        font=dict(family="'Inter', sans-serif", color=MUTED, size=11),
+        legend=dict(orientation="h", yanchor="top", y=-0.16, x=0, title_text="", font=dict(color=TEXT, size=10)),
         margin=dict(l=10, r=10, t=56 if title else 24, b=10),
-        hoverlabel=dict(bgcolor="#141A2B", bordercolor="#2E3856", font=dict(color=TEXT)),
+        hoverlabel=dict(bgcolor="#111827", bordercolor="#1e293b", font=dict(color=TEXT, family="'JetBrains Mono', monospace", size=11)),
         hovermode="closest",
     )
-    fig.update_xaxes(gridcolor=GRID, zeroline=False, linecolor=GRID, title_font=dict(color=MUTED))
-    fig.update_yaxes(gridcolor=GRID, zeroline=False, linecolor=GRID, title_font=dict(color=MUTED))
+    fig.update_xaxes(gridcolor=GRID, zeroline=False, linecolor=GRID, title_font=dict(color=MUTED, size=11))
+    fig.update_yaxes(gridcolor=GRID, zeroline=False, linecolor=GRID, title_font=dict(color=MUTED, size=11))
     return fig
 
 
@@ -74,7 +74,7 @@ def build_chart(df: pd.DataFrame, chart_type: str, x: str, y: str | None = None,
         fig.update_traces(line=dict(width=2), marker=dict(size=8))
     elif chart_type == "scatter":
         fig = px.scatter(d, x=x, y=y, error_y=error_y, **common)
-        fig.update_traces(marker=dict(size=9, line=dict(width=1, color="#0B0F1A")))
+        fig.update_traces(marker=dict(size=9, line=dict(width=1, color="#0b1120")))
     elif chart_type == "bar":
         fig = px.bar(d, x=x, y=y, error_y=error_y, barmode="group", **common)
         fig.update_traces(marker_line_width=0)
