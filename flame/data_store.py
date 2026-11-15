@@ -149,7 +149,9 @@ class DataStore:
             lines.append(
                 f"- {r.series_id} | {_short(r.series_label)} | {r.kind}{'*' if r.kind_inferred else ''} | {cond} | "
                 f"{r.x_var}[{r.x_unit}]→{r.y_var}[{r.y_unit}] | `{_short(r.y_column)}` | {r.n_points} | {r.y_min:.4g}…{r.y_max:.4g}")
-        lines.append("(* = tipo dedotto: serie non etichettata in un file che etichetta esplicitamente modelli/simulazioni)")
+        lines.append("(* = tipo dedotto, la serie non e' etichettata nel file: 'simulation' se contiene grandezze solo calcolabili "
+                     "(T_max, posizione del massimo di OH); 'experiment' se il file etichetta a parte modelli/simulazioni "
+                     "oppure e' una tabella di dati di volo/test (log, matrici di test, misure strumentali) e non la figura di un articolo)")
         lines.append("\n## Report PDF")
         for r in self.documents.itertuples():
             lines.append(f"- [{r.experiment_tag}] `{r.file_name}` — {r.doc_type}, {r.n_pages} pagine — {r.title}")

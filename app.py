@@ -74,6 +74,7 @@ st.markdown("""
     -webkit-background-clip: text; background-clip: text; color: transparent;
     font-family: 'Inter', sans-serif;
 }
+
 .hero p { margin: 0; color: #94a3b8; font-size: 0.98rem; max-width: 860px; line-height: 1.5; }
 section[data-testid="stSidebar"] { background: #0b1120; border-right: 1px solid #1e293b; }
 div[data-testid="stExpander"] details { border: 1px solid #1e293b; border-radius: 12px; background: #111827; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4); }
@@ -98,7 +99,21 @@ button[data-baseweb="tab"][aria-selected="true"] { color: #38bdf8 !important; bo
 ::-webkit-scrollbar-track { background: #0b1120; }
 ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+
 #MainMenu, footer { visibility: hidden; }
+/* indicatore di caricamento: icone spaziali al posto degli omini di Streamlit */
+[data-testid="stStatusWidgetRunningManIcon"], [data-testid="stStatusWidgetNewYearsIcon"] { display: none !important; }
+[data-testid="stStatusWidgetRunningIcon"] { display: inline-flex; align-items: center; justify-content: center; }
+[data-testid="stStatusWidgetRunningIcon"]::after {
+    content: "🚀"; font-size: 1.35rem; line-height: 1; display: inline-block;
+    animation: space-icons 4.8s steps(1, end) infinite, space-float 1.2s ease-in-out infinite;
+}
+@keyframes space-icons {
+    0%    { content: "🚀"; }  12.5% { content: "🛰️"; } 25%   { content: "🧑‍🚀"; } 37.5% { content: "🪐"; }
+    50%   { content: "☄️"; }  62.5% { content: "🌍"; }  75%   { content: "🌙"; }  87.5% { content: "🔭"; }
+}
+@keyframes space-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,6 +126,8 @@ st.markdown("""
   NASA PSI per analizzare limiti di estinzione, pressioni e diluenti, con grafici e fonti verificate.</p>
 </div>
 """, unsafe_allow_html=True)
+# segnaposto subito sotto il banner: qui compaiono i pulsanti delle sezioni (definiti piu' avanti, dopo i callback)
+nav_slot = st.container()
 
 
 # --------------------------------------------------------------------------- risorse
@@ -301,8 +318,13 @@ st.session_state.setdefault("panel_open", False)
 st.session_state.setdefault("panel_wide", False)
 
 
-def toggle_panel():
-    st.session_state.panel_open = not st.session_state.panel_open
+def open_panel(tab: str):
+    st.session_state.main_tab = tab
+    st.session_state.panel_open = True
+
+
+def close_panel():
+    st.session_state.panel_open = False
 
 
 def toggle_wide():
@@ -310,7 +332,10 @@ def toggle_wide():
 
 
 # Il pannello e' sempre renderizzato (cosi' grafici e selezioni restano pronti) ma, se chiuso, viene spostato fuori schermo.
+
 panel_w_css = "min(1680px, 96vw)" if st.session_state.get("panel_wide") else "min(880px, 62vw)"
+
+
 st.markdown(f"""
 <style>
 .st-key-chat_area {{ max-width: 1000px; margin: 0 auto; }}
@@ -341,6 +366,36 @@ if not st.session_state.panel_open:
 # chat_input al livello principale: Streamlit lo fissa in fondo allo schermo, indipendente dallo scorrimento.
 query = st.chat_input("Es: confronta il diametro di estinzione sperimentale e simulato al variare della pressione",
                       disabled=not api_key)
+
+@st.cache_resource(show_spinner=False)
+def dataset_kpis(_store: DataStore) -> dict:
+    """Numeri di sintesi calcolati dal dataset caricato (non valori fissi)."""
+    p = _store.points
+    # pressione ambiente di prova: condizioni delle serie e assi di pressione (non le pressioni delle linee di bordo)
+    amb = pd.concat([_store.series.pressure_atm, p.loc[p.x_var == "pressure", "x"]]).dropna()
+    return {"experiments": len(_store.experiment_tags), "exp_points": int((p.kind == "experiment").sum()),
+            "all_points": len(p), "reports": len(_store.documents), "pages": int(_store.documents.n_pages.sum()),
+            "p_min": float(amb.min()) if len(amb) else None, "p_max": float(amb.max()) if len(amb) else None}
+
+
+def it_num(n: float) -> str:
+    return f"{n:,.0f}".replace(",", ".")
+
+
+def it_dec(x: float) -> str:
+    return f"{x:g}".replace(".", ",")
+
+
+kpi = dataset_kpis(store)
+with st.container(key="kpi_row"):
+    k = st.columns(4)
+    k[0].metric("Esperimenti NASA PSI", kpi["experiments"], help="Codici PSI distinti con dati o report caricati.")
+    k[1].metric("Punti sperimentali", it_num(kpi["exp_points"]),
+                help=f"Misure di tipo esperimento, su {it_num(kpi['all_points'])} punti totali (esperimenti, modelli e simulazioni).")
+    k[2].metric("Report tecnici indicizzati", kpi["reports"], help=f"{it_num(kpi['pages'])} pagine consultabili dall'assistente.")
+    if kpi["p_min"] is not None:
+        k[3].metric("Range di pressione", f"{it_dec(kpi['p_min'])}–{it_dec(kpi['p_max'])} atm",
+                    help=f"Pressione ambiente delle prove (≈ {it_num(kpi['p_min'] * 101.325)}–{it_num(kpi['p_max'] * 101.325)} kPa).")
 
 with st.container(key="chat_area"):
     st.subheader(TAB_CHAT)
@@ -553,6 +608,22 @@ with tab_docs:
             st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {doc_sel}, p. {page}]")
             st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
+# ============================== SIMULATORE & TEST ==============================
+with tab_sim:
+    st.subheader("🧪 Simulatore & test")
+    sim_conf = st.selectbox("Scelta configurazione", SIM_CONFIGS, index=None, key="sim_config",
+                            format_func=lambda c: f"{SIM_CONFIGS.index(c) + 1}. {c}",
+                            placeholder="Seleziona una configurazione")
+    sim_w = st.number_input("Larghezza W [mm]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                            placeholder="Inserisci la larghezza del campione", key="sim_w")
+    sim_p = st.number_input("Pressione ambiente P [kPa]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                            placeholder="Inserisci la pressione ambiente", key="sim_p")
+    sim_u = st.number_input("Velocità ventola imposta U_forced [cm/s]", min_value=0.0, value=None, step=0.5, format="%.2f",
+                            placeholder="Inserisci la velocità del flusso forzato", key="sim_u")
+    sim_o2 = st.number_input("Concentrazione ossigeno O₂ [% vol]", min_value=0.0, max_value=100.0, value=None, step=0.5,
+                             format="%.2f", placeholder="Inserisci la concentrazione di ossigeno", key="sim_o2")
+    sim_t0 = st.number_input("Temperatura iniziale T0 [K]", min_value=0.0, value=None, step=1.0, format="%.2f",
+                             placeholder="Inserisci la temperatura iniziale", key="sim_t0")
 
 # ============================== NORME DI SICUREZZA ==============================
 def show_checks(res: pd.DataFrame, key: str, title: str):
