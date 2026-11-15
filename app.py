@@ -126,8 +126,6 @@ st.markdown("""
   NASA PSI per analizzare limiti di estinzione, pressioni e diluenti, con grafici e fonti verificate.</p>
 </div>
 """, unsafe_allow_html=True)
-# segnaposto subito sotto il banner: qui compaiono i pulsanti delle sezioni (definiti piu' avanti, dopo i callback)
-nav_slot = st.container()
 
 
 # --------------------------------------------------------------------------- risorse
@@ -318,6 +316,10 @@ st.session_state.setdefault("panel_open", False)
 st.session_state.setdefault("panel_wide", False)
 
 
+def toggle_panel():
+    st.session_state.panel_open = not st.session_state.panel_open
+
+
 def open_panel(tab: str):
     st.session_state.main_tab = tab
     st.session_state.panel_open = True
@@ -366,36 +368,6 @@ if not st.session_state.panel_open:
 # chat_input al livello principale: Streamlit lo fissa in fondo allo schermo, indipendente dallo scorrimento.
 query = st.chat_input("Es: confronta il diametro di estinzione sperimentale e simulato al variare della pressione",
                       disabled=not api_key)
-
-@st.cache_resource(show_spinner=False)
-def dataset_kpis(_store: DataStore) -> dict:
-    """Numeri di sintesi calcolati dal dataset caricato (non valori fissi)."""
-    p = _store.points
-    # pressione ambiente di prova: condizioni delle serie e assi di pressione (non le pressioni delle linee di bordo)
-    amb = pd.concat([_store.series.pressure_atm, p.loc[p.x_var == "pressure", "x"]]).dropna()
-    return {"experiments": len(_store.experiment_tags), "exp_points": int((p.kind == "experiment").sum()),
-            "all_points": len(p), "reports": len(_store.documents), "pages": int(_store.documents.n_pages.sum()),
-            "p_min": float(amb.min()) if len(amb) else None, "p_max": float(amb.max()) if len(amb) else None}
-
-
-def it_num(n: float) -> str:
-    return f"{n:,.0f}".replace(",", ".")
-
-
-def it_dec(x: float) -> str:
-    return f"{x:g}".replace(".", ",")
-
-
-kpi = dataset_kpis(store)
-with st.container(key="kpi_row"):
-    k = st.columns(4)
-    k[0].metric("Esperimenti NASA PSI", kpi["experiments"], help="Codici PSI distinti con dati o report caricati.")
-    k[1].metric("Punti sperimentali", it_num(kpi["exp_points"]),
-                help=f"Misure di tipo esperimento, su {it_num(kpi['all_points'])} punti totali (esperimenti, modelli e simulazioni).")
-    k[2].metric("Report tecnici indicizzati", kpi["reports"], help=f"{it_num(kpi['pages'])} pagine consultabili dall'assistente.")
-    if kpi["p_min"] is not None:
-        k[3].metric("Range di pressione", f"{it_dec(kpi['p_min'])}–{it_dec(kpi['p_max'])} atm",
-                    help=f"Pressione ambiente delle prove (≈ {it_num(kpi['p_min'] * 101.325)}–{it_num(kpi['p_max'] * 101.325)} kPa).")
 
 with st.container(key="chat_area"):
     st.subheader(TAB_CHAT)
@@ -608,22 +580,7 @@ with tab_docs:
             st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {doc_sel}, p. {page}]")
             st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
-# ============================== SIMULATORE & TEST ==============================
-with tab_sim:
-    st.subheader("🧪 Simulatore & test")
-    sim_conf = st.selectbox("Scelta configurazione", SIM_CONFIGS, index=None, key="sim_config",
-                            format_func=lambda c: f"{SIM_CONFIGS.index(c) + 1}. {c}",
-                            placeholder="Seleziona una configurazione")
-    sim_w = st.number_input("Larghezza W [mm]", min_value=0.0, value=None, step=1.0, format="%.2f",
-                            placeholder="Inserisci la larghezza del campione", key="sim_w")
-    sim_p = st.number_input("Pressione ambiente P [kPa]", min_value=0.0, value=None, step=1.0, format="%.2f",
-                            placeholder="Inserisci la pressione ambiente", key="sim_p")
-    sim_u = st.number_input("Velocità ventola imposta U_forced [cm/s]", min_value=0.0, value=None, step=0.5, format="%.2f",
-                            placeholder="Inserisci la velocità del flusso forzato", key="sim_u")
-    sim_o2 = st.number_input("Concentrazione ossigeno O₂ [% vol]", min_value=0.0, max_value=100.0, value=None, step=0.5,
-                             format="%.2f", placeholder="Inserisci la concentrazione di ossigeno", key="sim_o2")
-    sim_t0 = st.number_input("Temperatura iniziale T0 [K]", min_value=0.0, value=None, step=1.0, format="%.2f",
-                             placeholder="Inserisci la temperatura iniziale", key="sim_t0")
+
 
 # ============================== NORME DI SICUREZZA ==============================
 def show_checks(res: pd.DataFrame, key: str, title: str):
