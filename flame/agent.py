@@ -61,8 +61,8 @@ TOOLS = [
                 "facet": {"type": "string", "description": "Colonna per pannelli separati"},
                 "error_y": {"type": "string", "description": "Colonna con l'ampiezza della barra d'errore"},
                 "title": {"type": "string"},
-                "x_label": {"type": "string", "description": "Etichetta asse x con unita', es. 'Pressione [atm]'"},
-                "y_label": {"type": "string", "description": "Etichetta asse y con unita'"},
+                "x_label": {"type": "string", "description": "Etichetta asse x con unita', in inglese, es. 'Pressure [atm]'"},
+                "y_label": {"type": "string", "description": "Etichetta asse y con unita', in inglese"},
                 "log_x": {"type": "boolean"},
                 "log_y": {"type": "boolean"},
             },
@@ -188,7 +188,7 @@ SAFETY_PROMPT = """
 - Quando l'utente chiede se valori, simulazioni o condizioni sperimentali rispettano le norme, usa `check_safety_compliance` (dopo `query_data` se servono dati specifici) e commenta esito e margine. Non fare tu i confronti a mente.
 - Distingui il tipo di limite: requisito normativo, riferimento di progetto, soglia sperimentale o capacita' di un dispositivo. Una "zona di rischio" non e' una violazione di norma: indica condizioni in cui l'incendio e' possibile o piu' pericoloso.
 - Per CO, HCN, HCl e altri gas tossici i documenti rimandano alle SMAC (JSC-20584), che non fanno parte del corpus: dichiaralo, non inventare soglie.
-- Citazioni dalle norme: [Fonte: SAFETY | nome_file.pdf, p. N]; per i limiti indica anche l'ID, es. (SAF-004).
+- Citazioni dalle norme: [Source: SAFETY | nome_file.pdf, p. N]; per i limiti indica anche l'ID, es. (SAF-004).
 
 # Catalogo limiti di sicurezza (unita' canoniche)
 {safety_catalog}
@@ -208,13 +208,15 @@ SYSTEM_TEMPLATE = """Sei l'assistente scientifico di "Flame in Freefall", piatta
 - I dati tabellari sono "figure data": valori digitalizzati/esportati dalle figure degli articoli citati (DOI nel catalogo); le serie di tipo model/simulation sono risultati numerici, non misure.
 
 # Citazioni (OBBLIGATORIE)
-- Ogni affermazione tratta dai report: [Fonte: PSI-XXX | nome_file.pdf, p. N]
-- Ogni valore tratto dai dati: [Dati: PSI-XXX | nome_file.csv, serie <series_id>] (aggiungi figura/DOI quando utile).
+- Ogni affermazione tratta dai report: [Source: PSI-XXX | nome_file.pdf, p. N]
+- Ogni valore tratto dai dati: [Data: PSI-XXX | nome_file.csv, series <series_id>] (aggiungi figura/DOI quando utile).
 - Scrivi SEMPRE il nome file completo ed esatto (non abbreviarlo, non "la tesi"), e il numero di pagina del PDF restituito dagli strumenti.
 - Usa solo file, pagine e serie effettivamente restituiti dagli strumenti.
 
 # Stile
-- Rispondi nella lingua dell'utente (predefinito: italiano), in Markdown conciso e tecnico.
+- Rispondi SEMPRE in inglese (l'interfaccia e' in inglese), anche se l'utente scrive in un'altra lingua, in Markdown conciso e tecnico.
+- Non usare mai emoji nelle risposte, nei titoli di tabelle o grafici e nelle etichette.
+- Titoli di tabelle e grafici ed etichette degli assi sempre in inglese.
 - Non ricopiare nel testo tabelle lunghe: l'interfaccia mostra gia' tabelle e grafici; commentali e riassumi i numeri chiave.
 - Unita' di misura sempre esplicite.
 
@@ -352,7 +354,7 @@ class FlameAgent:
             out = []
             for r in g.itertuples():
                 art.doc_hits.setdefault((r.file_name, int(r.page_number)), {"tag": r.experiment_tag, "section": r.section, "text": r.text})
-                out.append(f"[Fonte: {r.experiment_tag} | {r.file_name}, p. {r.page_number}] sezione: {r.section or 'n/d'}\n{r.text}")
+                out.append(f"[Source: {r.experiment_tag} | {r.file_name}, p. {r.page_number}] section: {r.section or 'n/a'}\n{r.text}")
             return "\n\n---\n\n".join(out)[:24000]
         if name == "get_document_overview":
             fname = args.get("file_name")
@@ -454,21 +456,21 @@ class FlameAgent:
                 continue
             seen.add((ds, yv))
             chosen = [i for i in ids if i in set(hit[(hit.dataset == ds) & (hit.y_var == yv)].series_id)]
-            out.append(self._explore(ds, yv, chosen, False, False, "Dati consultati dall'assistente per questa risposta."))
+            out.append(self._explore(ds, yv, chosen, False, False, "Data consulted by the assistant for this answer."))
         return out
 
     @staticmethod
     def _describe(name: str, args: dict) -> str:
         return {
-            "query_data": lambda: f"🧮 Query sui dati: {args.get('title', '')}",
-            "create_chart": lambda: f"📈 Grafico: {args.get('title', '')}",
-            "search_reports": lambda: f"🔎 Ricerca nei report: “{args.get('query', '')}”",
-            "read_report_pages": lambda: f"📖 Lettura {args.get('file_name', '')[:50]} pp. {args.get('start_page')}–{args.get('end_page')}",
-            "get_document_overview": lambda: "🗂️ Sommari e indici dei report",
-            "get_raw_table": lambda: f"📄 Tabella originale {args.get('dataset', '')}",
-            "suggest_explorer": lambda: f"🔬 Suggerimento per Esplora le serie: {args.get('dataset', '')}",
-            "search_safety_norms": lambda: f"🛡️ Ricerca nelle norme di sicurezza: “{args.get('query', '')}”",
-            "check_safety_compliance": lambda: "🛡️ Verifica di conformità alle norme antincendio",
+            "query_data": lambda: f"Data query: {args.get('title', '')}",
+            "create_chart": lambda: f"Chart: {args.get('title', '')}",
+            "search_reports": lambda: f"Searching the reports: “{args.get('query', '')}”",
+            "read_report_pages": lambda: f"Reading {args.get('file_name', '')[:50]} pp. {args.get('start_page')}–{args.get('end_page')}",
+            "get_document_overview": lambda: "Report summaries and tables of contents",
+            "get_raw_table": lambda: f"Original table {args.get('dataset', '')}",
+            "suggest_explorer": lambda: f"Suggested view in the Data tab: {args.get('dataset', '')}",
+            "search_safety_norms": lambda: f"Searching the safety standards: “{args.get('query', '')}”",
+            "check_safety_compliance": lambda: "Fire safety standards compliance check",
         }.get(name, lambda: name)()
 
     # ------------------------------------------------------------------ loop
@@ -505,7 +507,7 @@ class FlameAgent:
                     results.append({"type": "tool_result", "tool_use_id": block.id, "content": out})
                 except Exception as e:  # l'errore torna al modello, che puo' correggersi (es. SQL)
                     art.trace.append({"tool": block.name, "label": desc, "input": args, "ok": False, "error": str(e)})
-                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": f"Errore: {e}", "is_error": True})
+                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": f"Error: {e}", "is_error": True})
             messages.append({"role": "user", "content": results})
         text = "\n".join(b.text for b in (response.content if response else []) if b.type == "text").strip()
         stop = response.stop_reason if response else None
@@ -513,12 +515,12 @@ class FlameAgent:
             text = (last_text + ("\n\n" + text if text else "")).strip()
         art.explores = self._consulted_explores(art)
         if stop == "refusal":
-            text = "⚠️ La richiesta non puo' essere elaborata dal modello. Prova a riformularla."
+            text = "The model cannot process this request. Try rephrasing it."
         elif stop == "tool_use":
-            text = (text + "\n\n" if text else "") + "⚠️ Analisi interrotta: raggiunto il numero massimo di passaggi. Prova a restringere la domanda."
+            text = (text + "\n\n" if text else "") + "Analysis stopped: the maximum number of steps was reached. Try narrowing the question."
         elif stop == "max_tokens":
-            text += "\n\n⚠️ Risposta troncata per lunghezza."
-        return AgentResult(text or "_(nessuna risposta testuale)_", art, stop, usage)
+            text += "\n\nAnswer truncated because of its length."
+        return AgentResult(text or "_(no text answer)_", art, stop, usage)
 
     @staticmethod
     def history_entry(result: AgentResult) -> str:

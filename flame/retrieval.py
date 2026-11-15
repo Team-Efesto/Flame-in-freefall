@@ -64,7 +64,7 @@ class Hit:
 
     @property
     def citation(self) -> str:
-        return f"[Fonte: {self.experiment_tag} | {self.file_name}, p. {self.page_number}]"
+        return f"[Source: {self.experiment_tag} | {self.file_name}, p. {self.page_number}]"
 
 
 def _open_collection(vector_dir: Path, collection: str = CHROMA_COLLECTION):

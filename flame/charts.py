@@ -48,19 +48,19 @@ def build_chart(df: pd.DataFrame, chart_type: str, x: str, y: str | None = None,
                 error_y: str | None = None) -> go.Figure:
     for c in (x, y, color, facet, error_y):
         if c and c not in df.columns:
-            raise ValueError(f"Colonna '{c}' non presente. Colonne disponibili: {list(df.columns)}")
+            raise ValueError(f"Column '{c}' not found. Available columns: {list(df.columns)}")
     if chart_type not in CHART_TYPES:
-        raise ValueError(f"chart_type deve essere uno di {CHART_TYPES}")
+        raise ValueError(f"chart_type must be one of {CHART_TYPES}")
     if y is None and chart_type not in ("histogram",):
-        raise ValueError("y e' obbligatorio per questo tipo di grafico")
+        raise ValueError("y is required for this chart type")
 
     d = df.copy()
     if color:
         d[color] = d[color].astype(str)
         n = d[color].nunique()
         if n > MAX_COLORS:
-            raise ValueError(f"'{color}' ha {n} categorie: massimo {MAX_COLORS} colori distinguibili. "
-                             "Filtra le serie, aggrega, oppure usa `facet` per pannelli separati.")
+            raise ValueError(f"'{color}' has {n} categories: at most {MAX_COLORS} distinguishable colors. "
+                             "Filter the series, aggregate, or use `facet` for separate panels.")
     cmap = color_map(d[color]) if color else None
     labels = {k: v for k, v in ((x, x_label), (y, y_label)) if k and v}
     common = dict(color=color, color_discrete_map=cmap, labels=labels, log_x=log_x)
@@ -101,12 +101,12 @@ def build_chart(df: pd.DataFrame, chart_type: str, x: str, y: str | None = None,
 def series_chart(points: pd.DataFrame, log_x: bool = False, log_y: bool = False, title: str | None = None) -> go.Figure:
     """Grafico delle serie selezionate in dashboard: pannelli separati se le grandezze y differiscono."""
     d = points.copy()
-    d["serie"] = d["series_id"].str.split(":").str[-1] + " · " + d["series_label"].astype(str).str.slice(0, 40)
+    d["series"] = d["series_id"].str.split(":").str[-1] + " · " + d["series_label"].astype(str).str.slice(0, 40)
     facet = "y_var" if d["y_var"].nunique() > 1 else None
     x_unit = d["x_unit"].iloc[0]
     y_unit = d["y_unit"].iloc[0] if not facet else ""
     x_label = f"{d['x_var'].iloc[0]} [{x_unit}]" if d["x_var"].nunique() == 1 else "x"
     y_label = f"{d['y_var'].iloc[0]} [{y_unit}]" if not facet else "y"
     mode = "line+markers" if d.groupby("series_id").size().max() <= 60 else "line"
-    return build_chart(d, mode, "x", "y", color="serie", facet=facet, title=title,
+    return build_chart(d, mode, "x", "y", color="series", facet=facet, title=title,
                        x_label=x_label, y_label=y_label, log_x=log_x, log_y=log_y)

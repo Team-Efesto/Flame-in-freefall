@@ -92,15 +92,15 @@ class DataStore:
     def validate_sql(sql: str) -> str:
         s = sql.strip().rstrip(";").strip()
         if not s:
-            raise ValueError("Query vuota.")
+            raise ValueError("Empty query.")
         if ";" in s:
-            raise ValueError("E' consentita una sola istruzione SQL.")
+            raise ValueError("Only one SQL statement is allowed.")
         if not re.match(r"^(select|with)\b", s, re.IGNORECASE):
-            raise ValueError("Sono consentite solo query SELECT (o WITH ... SELECT).")
+            raise ValueError("Only SELECT queries (or WITH ... SELECT) are allowed.")
         stripped = re.sub(r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"", "''", s)  # ignora stringhe/identificatori
         m = _FORBIDDEN.search(stripped)
         if m:
-            raise ValueError(f"Parola chiave non consentita: {m.group(0)}")
+            raise ValueError(f"Keyword not allowed: {m.group(0)}")
         return s
 
     def query(self, sql: str, max_rows: int = MAX_ROWS) -> QueryResult:

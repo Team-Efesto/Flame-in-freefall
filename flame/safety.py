@@ -144,14 +144,14 @@ def to_canonical(values, parameter: str, unit: str | None) -> tuple[np.ndarray, 
     if parameter == "oxygen_concentration" and u in ("", "-"):
         finite = v[np.isfinite(v)]
         if finite.size and finite.max() > 1.0:   # gia' in percentuale
-            u, note = "%", "unita' assente: valori > 1 interpretati come %"
+            u, note = "%", "no unit: values > 1 read as %"
         else:
-            note = "unita' assente: valori <= 1 interpretati come frazione molare"
+            note = "no unit: values <= 1 read as mole fraction"
     if u not in convs:
         if u == "" and _norm_unit(CANONICAL_UNITS[parameter]) in convs:
-            u, note = _norm_unit(CANONICAL_UNITS[parameter]), f"unita' assente: assunta {CANONICAL_UNITS[parameter]}"
+            u, note = _norm_unit(CANONICAL_UNITS[parameter]), f"no unit: assumed {CANONICAL_UNITS[parameter]}"
         else:
-            raise ValueError(f"Unita' '{unit}' non convertibile per {parameter} (ammesse: {sorted(convs)})")
+            raise ValueError(f"Unit '{unit}' cannot be converted for {parameter} (allowed: {sorted(convs)})")
     return convs[u](v), note
 
 
@@ -159,7 +159,7 @@ class SafetyLimits:
     def __init__(self, safety_dir=SAFETY_DIR):
         path = safety_dir / "safety_limits.parquet"
         if not path.exists():
-            raise FileNotFoundError(f"{path} non trovato: esegui prima `python build_safety_db.py`")
+            raise FileNotFoundError(f"{path} not found: run `python build_safety_db.py` first")
         self.limits = pd.read_parquet(path)
         req = safety_dir / "safety_requirements.parquet"
         self.requirements = pd.read_parquet(req) if req.exists() else pd.DataFrame()
@@ -222,7 +222,7 @@ class SafetyLimits:
                 "worst_value": float(v[worst]), "margin": float(margin[worst]),
                 "violation": bool(viol.any()),
                 "esito": _esito(r.bound_type, bool(viol.any())),
-                "confronto": "indicativo (proxy)" if is_proxy else "diretto",
+                "confronto": "indicative (proxy)" if is_proxy else "direct",
                 "unit_note": unit_note, "description": r.description, "citation": r.citation,
             })
         return pd.DataFrame(rows)
@@ -264,7 +264,7 @@ class SafetyLimits:
                 r = self.check(g[axis], str(vals[var]), None if pd.isna(u) else str(u),
                                label=str(vals.get(key, vals[var])), allow_proxy=allow_proxy, **kw)
                 if not r.empty:
-                    out.append(r.assign(series_id=vals.get(key), source=f"colonna {axis} ({vals[var]})"))
+                    out.append(r.assign(series_id=vals.get(key), source=f"column {axis} ({vals[var]})"))
         return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
 
     def check_any(self, df: pd.DataFrame, **kw) -> pd.DataFrame:
@@ -275,7 +275,7 @@ class SafetyLimits:
         """Elenco compatto dei limiti (per il prompt dell'agente)."""
         lines = []
         for r in self.limits.itertuples():
-            opt = "" if getattr(r, "applies_by_default", True) else " [opzionale: solo con limit_ids/include_all]"
+            opt = "" if getattr(r, "applies_by_default", True) else " [optional: only with limit_ids/include_all]"
             lines.append(f"- {r.limit_id} | {r.parameter} | {_fmt_bounds(r)} | {r.limit_type} | {r.scope}{opt} | {r.citation}")
         return "\n".join(lines)
 
@@ -293,7 +293,7 @@ class SafetyLimits:
             for axis, var, unit in (("y", s.y_var, s.y_unit), ("x", s.x_var, s.x_unit)):
                 r = self.check(p[axis], var, unit, label=s.series_id, allow_proxy=allow_proxy, **kw)
                 if not r.empty:
-                    out.append(r.assign(series_id=s.series_id, source="serie", experiment_tag=s.experiment_tag))
+                    out.append(r.assign(series_id=s.series_id, source="series", experiment_tag=s.experiment_tag))
         for name in series.dataset.unique():  # condizioni ambientali, una volta per dataset
             if name not in ds.index:
                 continue
@@ -304,7 +304,7 @@ class SafetyLimits:
                 if vals:
                     r = self.check(vals, q, u, label=name, **kw)
                     if not r.empty:
-                        out.append(r.assign(series_id=ids, source=f"condizione dataset ({col})",
+                        out.append(r.assign(series_id=ids, source=f"dataset condition ({col})",
                                             experiment_tag=d.get("experiment_tag")))
         return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
 
@@ -333,7 +333,7 @@ def _fmt_bounds(r) -> str:
         rng = f"{'≤' if r.upper_inclusive else '<'} {hi} {r.unit}"
     else:
         rng = f"{'≥' if r.lower_inclusive else '>'} {lo} {r.unit}"
-    return ("zona conforme: " if r.bound_type == "compliant_zone" else "zona di rischio: ") + rng
+    return ("compliant zone: " if r.bound_type == "compliant_zone" else "risk zone: ") + rng
 
 
 def _parse_numbers(v) -> list[float]:

@@ -1,3 +1,4 @@
+import base64
 import json
 from pathlib import Path
 import re
@@ -15,16 +16,24 @@ from flame.export import safe_filename, to_csv_bytes, to_xlsx_bytes
 from flame.retrieval import ReportIndex
 from flame.safety import SafetyLimits, format_limit
 
-st.set_page_config(page_title="EFESTO — NASA Microgravity Fire Safety Dashboard", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="EFESTO — NASA Microgravity Fire Safety Dashboard", page_icon=str(Path(__file__).parent / "assets" / "navi_icon.png"), layout="wide")
 
-ALL = "Tutti gli esperimenti"
-KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
+ALL = "All experiments"
+# Simboli tipografici/emoji presenti nei testi estratti dai PDF (es. note a pie' di pagina): non mostrati
+_SYMBOLS = re.compile("[\U0001F000-\U0001FAFF☀-➿⬀-⯿️‍]")
+
+
+def plain(text) -> str:
+    return _SYMBOLS.sub("", str(text)).strip() if text is not None else ""
+
+
+KIND_LABELS = {"experiment": "Experiment", "model": "Model", "simulation": "Simulation", "unspecified": "Unspecified"}
 
 ESITO_ICON = {
-    "conforme": "✅ conforme",
-    "non conforme": "❌ non conforme",
-    "fuori zona di rischio": "✅ fuori zona di rischio",
-    "in zona di rischio": "⚠️ in zona di rischio"
+    "conforme": "compliant",
+    "non conforme": "non-compliant",
+    "fuori zona di rischio": "outside risk zone",
+    "in zona di rischio": "in risk zone"
 }
 
 HTML_DASHBOARD_FILE = Path(__file__).parent / "dashboard_psi.html"
@@ -59,8 +68,12 @@ button[data-testid="stSidebarCollapseButton"] {
 
 /* 2. CENTRATURA PERFETTA DEL SITO */
 .stApp {
-    background-color: #000000;
-    background-image: none;
+    background-color: #0a1626;
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='331' height='331'><g fill='%23e2e8f0'><path d='M40 30 l1.2 4.8 4.8 1.2 -4.8 1.2 -1.2 4.8 -1.2 -4.8 -4.8 -1.2 4.8 -1.2z' opacity='.85'/><path d='M250 95 l.9 3.6 3.6 .9 -3.6 .9 -.9 3.6 -.9 -3.6 -3.6 -.9 3.6 -.9z' opacity='.6'/><path d='M150 210 l1.6 6.4 6.4 1.6 -6.4 1.6 -1.6 6.4 -1.6 -6.4 -6.4 -1.6 6.4 -1.6z' opacity='.9'/><path d='M300 280 l.8 3.2 3.2 .8 -3.2 .8 -.8 3.2 -.8 -3.2 -3.2 -.8 3.2 -.8z' opacity='.5'/><circle cx='95' cy='140' r='1' opacity='.55'/><circle cx='210' cy='30' r='.8' opacity='.45'/><circle cx='60' cy='290' r='1.1' opacity='.6'/><circle cx='280' cy='190' r='.7' opacity='.4'/></g></svg>"),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><path d='M0 24.5H48M24.5 0V48' stroke='%2394a3b8' stroke-opacity='.07' fill='none'/><path d='M24.5 22.4 l.5 1.6 1.6 .5 -1.6 .5 -.5 1.6 -.5 -1.6 -1.6 -.5 1.6 -.5z' fill='%23cbd5e1' fill-opacity='.45'/></svg>"),
+        radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.07) 0%, rgba(10, 22, 38, 0) 60%);
+    background-attachment: fixed;
     color: #e2e8f0;
     font-family: 'Inter', system-ui, sans-serif;
 }
@@ -77,8 +90,10 @@ div[data-testid="stBottomBlockContainer"] {
     margin-right: auto !important;
 }
 div[data-testid="stBottom"] > div {
-    background: #000000;
+    background: rgba(10, 22, 38, 0.92);
 }
+
+header[data-testid="stHeader"] { background: transparent; }
 
 ::selection {
     background: rgba(245, 158, 11, 0.35);
@@ -93,6 +108,16 @@ div[data-testid="stBottom"] > div {
     margin-bottom: 1.5rem;
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.10) 0%, rgba(15, 23, 42, 0.96) 45%, rgba(11, 17, 32, 0.98) 100%);
     box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.7), 0 0 24px -6px rgba(245, 158, 11, 0.2);
+}
+.efesto-hero { display: flex; align-items: center; gap: 2rem; }
+.efesto-hero-text { flex: 1; min-width: 0; }
+.navi-logo {
+    width: 170px; height: 170px; flex-shrink: 0; border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(203, 213, 225, 0.25), 0 0 36px -4px rgba(203, 213, 225, 0.25);
+}
+@media (max-width: 760px) {
+    .efesto-hero { flex-direction: column; align-items: flex-start; }
+    .navi-logo { width: 110px; height: 110px; }
 }
 .efesto-badge {
     font-family: 'JetBrains Mono', monospace;
@@ -162,13 +187,15 @@ div[data-testid="stBottom"] > div {
 }
 .feat-card-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.6rem;
     font-size: 1.1rem;
     font-weight: 700;
     color: #f1f5f9;
     margin-bottom: 0.6rem;
 }
+.feat-card-header .feat-title { flex: 1; line-height: 1.35; }
+.feat-card-header sub, .feat-card-header sup { font-size: 0.7em; line-height: 0; }
 .feat-card-body {
     font-size: 0.88rem;
     color: #94a3b8;
@@ -228,7 +255,7 @@ button[data-baseweb="tab"]:hover { color: #e2e8f0 !important; }
 button[data-baseweb="tab"][aria-selected="true"] { color: #f59e0b !important; border-bottom: 3px solid #f59e0b !important; }
 
 ::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: #000000; }
+::-webkit-scrollbar-track { background: #0a1626; }
 ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
 
@@ -250,18 +277,15 @@ button[kind="primary"]:hover {
 
 #MainMenu, footer { visibility: hidden; }
 
-/* Indicatore di caricamento con icone fucina e spazio */
+/* Loading indicator: twinkling star */
 [data-testid="stStatusWidgetRunningManIcon"], [data-testid="stStatusWidgetNewYearsIcon"] { display: none !important; }
 [data-testid="stStatusWidgetRunningIcon"] { display: inline-flex; align-items: center; justify-content: center; }
 [data-testid="stStatusWidgetRunningIcon"]::after {
-    content: "⚒️"; font-size: 1.35rem; line-height: 1; display: inline-block;
-    animation: efesto-icons 4.8s steps(1, end) infinite, efesto-float 1.2s ease-in-out infinite;
+    content: ""; width: 18px; height: 18px; display: inline-block; background: #e2e8f0;
+    clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+    animation: efesto-twinkle 1.6s ease-in-out infinite;
 }
-@keyframes efesto-icons {
-    0%    { content: "⚒️"; }  16.6% { content: "🔨"; } 33.3%   { content: "🔥"; } 50% { content: "🚀"; }
-    66.6% { content: "🪐"; }  83.3% { content: "🌙"; }
-}
-@keyframes efesto-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+@keyframes efesto-twinkle { 0%, 100% { transform: scale(0.7) rotate(0deg); opacity: 0.6; } 50% { transform: scale(1.1) rotate(45deg); opacity: 1; } }
 </style>
 """)
 
@@ -319,9 +343,9 @@ def xlsx_bytes(df: pd.DataFrame, title: str, meta_json: str) -> bytes:
 
 def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None = None):
     c1, c2, _ = st.columns([1, 1, 3])
-    c1.download_button("⬇️ CSV", csv_bytes(df), safe_filename(title, "csv"), "text/csv",
+    c1.download_button("CSV", csv_bytes(df), safe_filename(title, "csv"), "text/csv",
                        key=f"{key}_csv", on_click="ignore", width="stretch")
-    c2.download_button("⬇️ Excel", xlsx_bytes(df, title, json.dumps(meta or {}, default=str)), safe_filename(title, "xlsx"),
+    c2.download_button("Excel", xlsx_bytes(df, title, json.dumps(meta or {}, default=str)), safe_filename(title, "xlsx"),
                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                        key=f"{key}_xlsx", on_click="ignore", width="stretch")
 
@@ -347,12 +371,12 @@ model = secret("ANTHROPIC_MODEL", DEFAULT_MODEL)
 
 
 # --------------------------------------------------------------------------- RENDERING RISPOSTE ASSISTENTE
-TAB_AGENT = "💬 Co-pilota IA"
-TAB_DATA = "📊 Dati & Serie Sperimentali"
-TAB_PSI = "🪐 Simulatore PSI (g/gₑ)"
-TAB_MPH = "🌙 Modulo Lunare MPH (0.165 gₑ)"
-TAB_REPORTS = "📚 Report Scientifici PSI"
-TAB_SAFETY = "🛡️ Norme di Sicurezza NASA"
+TAB_AGENT = "AI Co-pilot"
+TAB_DATA = "Experimental Data & Series"
+TAB_PSI = "PSI Simulator (g/gₑ)"
+TAB_MPH = "MPH Lunar Module (0.165 gₑ)"
+TAB_REPORTS = "PSI Scientific Reports"
+TAB_SAFETY = "NASA Safety Standards"
 ALL_DASHBOARD_TABS = [
     TAB_AGENT,
     TAB_DATA,
@@ -373,21 +397,21 @@ def apply_explore(sugg: dict):
 def render_explore(guides: list[dict], key: str):
     if not guides:
         return
-    st.markdown("**📊 Grafici di questi dati disponibili nella scheda Dati & Serie**")
+    st.markdown("**Charts of this data in the Data & Series tab**")
     for i, g in enumerate(guides):
         c1, c2 = st.columns([3, 2], vertical_alignment="center")
-        c1.markdown(f"**{g['figure'] or g['dataset']}** — {g['y_description']} · {len(g['series_ids'])} serie")
-        c2.button("Visualizza nella scheda Dati →", key=f"{key}_explore_{i}", on_click=apply_explore, args=(g,),
-                  width="stretch", help=f"Dataset {g['dataset']} · grandezza {g['y_var']}")
+        c1.markdown(f"**{g['figure'] or g['dataset']}** — {g['y_description']} · {len(g['series_ids'])} series")
+        c2.button("View in the Data tab →", key=f"{key}_explore_{i}", on_click=apply_explore, args=(g,),
+                  width="stretch", help=f"Dataset {g['dataset']} · quantity {g['y_var']}")
 
 
 def render_sources(msg: dict):
     hits, files = msg.get("doc_hits", []), msg.get("data_sources", [])
     if not hits and not files:
         return
-    with st.expander(f"📚 Fonti consultate ({len(hits)} pagine di report, {len(files)} file di dati)"):
+    with st.expander(f"Sources consulted ({len(hits)} report pages, {len(files)} data files)"):
         if files:
-            st.markdown("**Dati tabellari**")
+            st.markdown("**Tabular data**")
             for f in files:
                 info = ds_info.loc[f] if f in ds_info.index else None
                 extra = ""
@@ -395,7 +419,7 @@ def render_sources(msg: dict):
                     extra = f" — {info['journal']} {info['year']}, {info['figure']} · [DOI]({info['reference_doi']})"
                 st.markdown(f"- `{f}`{extra}")
         if hits:
-            st.markdown("**Report**")
+            st.markdown("**Reports**")
             for h in hits:
                 st.markdown(f"- `{h['tag']}` — `{h['file']}` · **p. {h['page']}**" + (f" · _{h['section']}_" if h["section"] else ""))
                 st.caption(h["text"][:300].replace("\n", " ") + "…")
@@ -407,21 +431,21 @@ def render_assistant(msg: dict, key: str):
     for i, ch in enumerate(msg.get("charts", [])):
         st.plotly_chart(ch["figure"], width="stretch", key=f"{key}_chart_{i}")
     for t in msg.get("tables", []):
-        st.markdown(f"**📋 {t['title']}** · {len(t['df'])} righe" + (" · ⚠️ troncata" if t.get("truncated") else ""))
+        st.markdown(f"**{t['title']}** · {len(t['df'])} rows" + (" · truncated" if t.get("truncated") else ""))
         st.dataframe(t["df"], width="stretch", height=min(420, 38 + 35 * len(t["df"])), hide_index=True)
         download_buttons(t["df"], t["title"], f"{key}_{t['id']}",
-                         {"query SQL": t.get("sql") or "tabella originale", "fonti": t.get("sources", [])})
+                         {"SQL query": t.get("sql") or "original table", "sources": t.get("sources", [])})
     render_sources(msg)
     if msg.get("trace") and secret("DEBUG_MODE", False):
-        with st.expander("🛠️ Dettagli dell'analisi"):
+        with st.expander("Analysis details"):
             for step in msg["trace"]:
-                st.markdown(f"{'✅' if step['ok'] else '❌'} {step['label']}")
+                st.markdown(f"{'[OK]' if step['ok'] else '[ERROR]'} {step['label']}")
                 if step["tool"] == "query_data":
                     st.code(step["input"].get("sql", ""), language="sql")
                 if not step["ok"]:
-                    st.caption(f"Errore (corretto automaticamente dal modello se possibile): {step.get('error')}")
+                    st.caption(f"Error (automatically corrected by the model when possible): {step.get('error')}")
             u = msg.get("usage") or {}
-            st.caption(f"Token — input: {u.get('input_tokens', 0):,} · da cache: {u.get('cache_read_input_tokens', 0):,} · "
+            st.caption(f"Tokens — input: {u.get('input_tokens', 0):,} · from cache: {u.get('cache_read_input_tokens', 0):,} · "
                        f"output: {u.get('output_tokens', 0):,}")
 
 
@@ -437,6 +461,16 @@ def to_message(result) -> dict:
         "trace": a.trace,
         "explores": a.explores,
     }
+
+
+# --------------------------------------------------------------------------- LOGO NAVI
+ASSETS_DIR = Path(__file__).parent / "assets"
+
+
+@st.cache_data(show_spinner=False)
+def logo_data_uri(name: str = "navi_logo.png") -> str:
+    path = ASSETS_DIR / name
+    return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode() if path.exists() else ""
 
 
 # --------------------------------------------------------------------------- VISUALIZZATORE IMMAGINE NASA
@@ -461,19 +495,18 @@ def render_nasa_flame_visual():
     if not rendered:
         fallback_html = """
 <div style="background:#0f172a; border:1px solid #1e293b; border-radius:16px; padding:2rem; text-align:center; margin-bottom:0.75rem;">
-<div style="font-size:3rem; margin-bottom:0.5rem;">🔥</div>
 <h3 style="color:#38bdf8; margin:0 0 0.5rem 0;">NASA FLEX-2 • Microgravity Droplet Combustion</h3>
 <p style="color:#94a3b8; font-size:0.9rem; max-width:620px; margin:0 auto;">
-Combustione di goccia isolata in microgravità (g<sub>eff</sub> ≈ 10<sup>-5</sup> g<sub>e</sub>). In assenza di galleggiamento termico la fiamma assume una simmetria perfettamente sferica dominata da trasporto diffusivo puro e regimi di cool flame.
+Isolated droplet combustion in microgravity (g<sub>eff</sub> ≈ 10<sup>-5</sup> g<sub>e</sub>). Without thermal buoyancy the flame takes on a perfectly spherical symmetry dominated by pure diffusive transport and cool-flame regimes.
 </p>
 </div>
 """
         html_clean(fallback_html)
 
-    st.caption("🔬 **Esperimento NASA FLEX (Flame Extinction Experiment) • ISS Combustion Integrated Rack (CIR)** — "
-               "Struttura sferica stazionaria di fiamma su goccia di idrocarburo isolata sospesa su fibre di quarzo. "
-               "In microgravità pura (Ra ≈ 0), la convezione naturale è completamente soppressa: la fiamma brucia in condizioni diffusive pure "
-               "e rivela la transizione a fiamme fredde (*cool flames*) a ~550 K prima dell'estinzione radiativa finale.")
+    st.caption("**NASA FLEX experiment (Flame Extinction Experiment) • ISS Combustion Integrated Rack (CIR)** — "
+               "Steady spherical flame structure around an isolated hydrocarbon droplet suspended on quartz fibers. "
+               "In pure microgravity (Ra ≈ 0) natural convection is completely suppressed: the flame burns under purely diffusive conditions "
+               "and reveals the transition to *cool flames* at ~550 K before final radiative extinction.")
 
 
 # ===========================================================================
@@ -483,63 +516,66 @@ def render_home_page():
     # 1. Hero Section
     html_clean("""
 <div class="efesto-hero">
-<div class="efesto-badge">⚒️ EFESTO · NASA PSI · LUNAR HABITAT FIRE SAFETY ENGINEERING</div>
+<img class="navi-logo" src="{logo}" alt="NAVI logo">
+<div class="efesto-hero-text">
+<div class="efesto-badge">EFESTO · NASA PSI · LUNAR HABITAT FIRE SAFETY ENGINEERING</div>
 <div class="efesto-title-text">EFESTO</div>
 <div class="efesto-subtitle-text">Flame in Freefall — NASA Microgravity Fire Safety Dashboard</div>
 <div class="efesto-desc-text">
-Piattaforma di ingegneria multifisica e intelligenza artificiale avanzata per la sicurezza antincendio
-nell'esplorazione spaziale profonda e negli habitat pressurizzati del programma Artemis.<br>
-EFESTO fonde i dati aperti del <b>NASA Physical Sciences Informatics (PSI)</b> con simulazioni computazionali,
-modelli di combustione di gocce in microgravità (0 g) e in gravità lunare parziale (0.165 g<sub>e</sub>), verifica rigorosa
-delle normative <b>NASA-STD-3001</b> e <b>NASA-STD-6001</b>, e un <b>Co-pilota IA</b> autonomo con citazioni verificate a livello di singola pagina.
+A multiphysics engineering and advanced artificial intelligence platform for fire safety
+in deep space exploration and in the pressurized habitats of the Artemis program.<br>
+EFESTO combines open data from <b>NASA Physical Sciences Informatics (PSI)</b> with computational simulations,
+droplet combustion models in microgravity (0 g) and partial lunar gravity (0.165 g<sub>e</sub>), rigorous verification
+against the <b>NASA-STD-3001</b> and <b>NASA-STD-6001</b> standards, and an autonomous <b>AI Co-pilot</b> with citations verified down to the single page.
 </div>
 </div>
-""")
+</div>
+""".replace("{logo}", logo_data_uri()))
 
     # UNICO PUNTO D'INGRESSO NELLA HERO
     c_btn1, c_btn2, c_btn3 = st.columns([1, 2.5, 1])
     with c_btn2:
-        st.button("🔨 Entra nella Dashboard EFESTO", type="primary", on_click=go_to_dashboard, key="hero_enter_cta", width="stretch")
+        st.button("Enter the EFESTO Dashboard", type="primary", on_click=go_to_dashboard, key="hero_enter_cta", width="stretch")
 
     st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
 
     # 2. Immagine NASA FLEX + Fisica del fuoco
     c_img, c_info = st.columns([1.15, 0.85], gap="large")
     with c_img:
-        st.markdown("#### 🔬 Combustione di Goccia in Microgravità (NASA FLEX)")
+        st.markdown("#### Droplet Combustion in Microgravity (NASA FLEX)")
         render_nasa_flame_visual()
 
     with c_info:
-        st.markdown("#### 🌌 La Fisica del Fuoco a g ≈ 0")
+        st.markdown("#### The Physics of Fire at g ≈ 0")
         html_clean("""
 <div class="feat-card" style="margin-bottom: 0.8rem;">
 <div class="feat-card-header" style="color: #38bdf8;">
-<span>🫧</span> Assenza di Galleggiamento Termico
+<span class="feat-title">No Thermal Buoyancy</span>
 </div>
 <div class="feat-card-body">
-Sulla Terra la spinta d'Archimede allunga la fiamma in una colonna convettiva ascendente.
-In caduta libera (g ≈ 10<sup>-5</sup> g<sub>e</sub>), con numero di Rayleigh Ra ≈ 0,
-il pennacchio scompare: la fiamma assume una <b>simmetria sferica perfetta</b> controllata unicamente da diffusione molecolare.
+On Earth, buoyancy stretches the flame into a rising convective column.
+In free fall (g ≈ 10<sup>-5</sup> g<sub>e</sub>), with Rayleigh number Ra ≈ 0,
+the plume disappears: the flame takes on a <b>perfect spherical symmetry</b> controlled only by molecular diffusion.
 </div>
 </div>
 
 <div class="feat-card" style="margin-bottom: 0.8rem;">
 <div class="feat-card-header" style="color: #f59e0b;">
-<span>❄️</span> Regime a Bassa Temperatura (Cool Flames)
+<span class="feat-title">Low-Temperature Regime (Cool Flames)</span>
 </div>
 <div class="feat-card-body">
-Nelle gocce di idrocarburo (es. n-eptano nell'esperimento FLEX), dopo l'apparente estinzione della fiamma visibile ad alta temperatura,
-la reazione chimica prosegue in un regime a <b>500–750 K</b> quasi impercettibile ad occhio nudo, continuando a consumare combustibile.
+In hydrocarbon droplets (e.g. n-heptane in the FLEX experiment), after the apparent extinction of the visible high-temperature flame,
+the chemical reaction continues in a <b>500–750 K</b> regime that is almost invisible to the naked eye, still consuming fuel.
 </div>
 </div>
 
 <div class="feat-card">
 <div class="feat-card-header" style="color: #ef4444;">
-<span>🌙</span> Transizione alla Gravità Lunare (0.165 g<sub>e</sub>)
+<span class="feat-title">Transition to Lunar Gravity (0.165 g<sub>e</sub>)</span>
 </div>
 <div class="feat-card-body">
-Sulla Luna la gravità ridotta attiva una convezione lenta ma insidiosa. Nei moduli abitativi come il Multi-Purpose Habitat (MPH),
-i limiti di estinzione e la velocità di propagazione su cavi e tessuti differiscono radicalmente dai test eseguiti a terra.
+On the Moon, reduced gravity drives a slow but insidious convection. In habitat modules such as the Multi-Purpose Habitat (MPH),
+extinction limits and flame spread rates over cables and fabrics differ radically from tests performed on Earth.
 </div>
 </div>
 """)
@@ -548,18 +584,18 @@ i limiti di estinzione e la velocità di propagazione su cavi e tessuti differis
     st.divider()
 
     # 3. Sezione Obiettivi
-    st.markdown("### 🎯 Obiettivi Scientifici & Ingegneristici di EFESTO")
-    st.caption("Progettato per ingegneri aerospaziali, ricercatori di microgravità e responsabili della sicurezza delle missioni spaziali con equipaggio.")
+    st.markdown("### EFESTO Scientific & Engineering Objectives")
+    st.caption("Designed for aerospace engineers, microgravity researchers and safety officers of crewed space missions.")
 
     o1, o2, o3, o4 = st.columns(4)
     with o1:
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#38bdf8;">
-<span>01</span> Combustione Diffusiva
+<span>01</span> <span class="feat-title">Diffusive Combustion</span>
 </div>
 <div class="feat-card-body">
-Caratterizzare la cinetica chimica e l'estinzione radiativa in assenza totale di convezione naturale (0 g) per prevenire inneschi incontrollati nei laboratori orbitali.
+Characterize chemical kinetics and radiative extinction in the complete absence of natural convection (0 g) to prevent uncontrolled ignitions in orbital laboratories.
 </div>
 </div>
 """)
@@ -568,10 +604,10 @@ Caratterizzare la cinetica chimica e l'estinzione radiativa in assenza totale di
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#f59e0b;">
-<span>02</span> Dati PSI & Modelli
+<span>02</span> <span class="feat-title">PSI Data & Models</span>
 </div>
 <div class="feat-card-body">
-Correlare oltre 15.000 punti sperimentali dal repository NASA PSI (PSI-117, BASS, Saffire) con la legge del diametro quadro (d<sup>2</sup>-law) e modelli analitici.
+Correlate more than 15,000 experimental points from the NASA PSI repository (PSI-117, BASS, Saffire) with the d<sup>2</sup>-law and analytical models.
 </div>
 </div>
 """)
@@ -580,10 +616,10 @@ Correlare oltre 15.000 punti sperimentali dal repository NASA PSI (PSI-117, BASS
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#10b981;">
-<span>03</span> Standard NASA-STD
+<span>03</span> <span class="feat-title">Standard NASA-STD</span>
 </div>
 <div class="feat-card-body">
-Validare automaticamente simulazioni e scenari operativi contro le prescrizioni vincolanti di NASA-STD-3001 (Human System) e NASA-STD-6001 (Flammability).
+Automatically validate simulations and operational scenarios against the binding requirements of NASA-STD-3001 (Human System) and NASA-STD-6001 (Flammability).
 </div>
 </div>
 """)
@@ -592,10 +628,10 @@ Validare automaticamente simulazioni e scenari operativi contro le prescrizioni 
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#a855f7;">
-<span>04</span> Co-pilota con RAG
+<span>04</span> <span class="feat-title">RAG Co-pilot</span>
 </div>
 <div class="feat-card-body">
-Garantire un'interrogazione trasparente basata su evidenze con query SQL in sandbox, generazione dinamica di grafici Plotly e citazioni a livello di pagina.
+Provide transparent, evidence-based querying with sandboxed SQL, dynamic Plotly charts and page-level citations.
 </div>
 </div>
 """)
@@ -604,18 +640,18 @@ Garantire un'interrogazione trasparente basata su evidenze con query SQL in sand
     st.divider()
 
     # 4. Card delle Funzionalità (schede pulite senza bottoni ridondanti)
-    st.markdown("### ⚡ Funzionalità della Piattaforma")
-    st.caption("Una suite completa di strumenti analitici, multifisici e bibliografici accessibile all'interno della Dashboard.")
+    st.markdown("### Platform Features")
+    st.caption("A complete suite of analytical, multiphysics and bibliographic tools available inside the Dashboard.")
 
     f1, f2, f3 = st.columns(3)
     with f1:
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#38bdf8;">
-<span>💬</span> Co-pilota IA & RAG Scientifico
+<span class="feat-title">AI Co-pilot & Scientific RAG</span>
 </div>
 <div class="feat-card-body">
-Assistente ingegneristico connesso a DuckDB e ChromaDB. Interroga dataset sperimentali con SQL sicuro, crea grafici Plotly e riporta la pagina esatta del report NASA.
+Engineering assistant connected to DuckDB and ChromaDB. It queries experimental datasets with safe SQL, builds Plotly charts and cites the exact page of the NASA report.
 </div>
 </div>
 """)
@@ -624,10 +660,10 @@ Assistente ingegneristico connesso a DuckDB e ChromaDB. Interroga dataset sperim
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#f59e0b;">
-<span>📊</span> Dati & Serie Sperimentali
+<span class="feat-title">Experimental Data & Series</span>
 </div>
 <div class="feat-card-body">
-Esplora 67 serie temporali storiche da missioni spaziali con selezione multi-serie, assi logaritmici, statistiche aggregate ed esportazione in CSV o Excel.
+Explore 67 historical time series from space missions with multi-series selection, logarithmic axes, aggregate statistics and CSV or Excel export.
 </div>
 </div>
 """)
@@ -636,10 +672,10 @@ Esplora 67 serie temporali storiche da missioni spaziali con selezione multi-ser
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#60a5fa;">
-<span>🪐</span> Laboratorio Parametrico PSI (g / g<sub>e</sub>)
+<span class="feat-title">PSI Parametric Laboratory (g / g<sub>e</sub>)</span>
 </div>
 <div class="feat-card-body">
-Mappe interattive e curve teoriche per calcolare diametri di estinzione, tassi di combustione e stabilità di fiamma al variare continuo dell'accelerazione di gravità.
+Interactive maps and theoretical curves to compute extinction diameters, burning rates and flame stability as gravitational acceleration varies continuously.
 </div>
 </div>
 """)
@@ -651,10 +687,10 @@ Mappe interattive e curve teoriche per calcolare diametri di estinzione, tassi d
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#fb7185;">
-<span>🌙</span> Modulo Lunare Artemis MPH (0.165 g<sub>e</sub>)
+<span class="feat-title">Artemis MPH Lunar Module (0.165 g<sub>e</sub>)</span>
 </div>
 <div class="feat-card-body">
-Simulatore multifisico della propagazione del fuoco nell'habitat lunare pressurizzato (0.165 g<sub>e</sub>). Include flussi di ventilazione, cinetica su polimeri e gas tossici.
+Multiphysics simulator of fire spread in the pressurized lunar habitat (0.165 g<sub>e</sub>). Includes ventilation flows, polymer kinetics and toxic gases.
 </div>
 </div>
 """)
@@ -663,10 +699,10 @@ Simulatore multifisico della propagazione del fuoco nell'habitat lunare pressuri
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#34d399;">
-<span>🛡️</span> Norme di Sicurezza NASA-STD
+<span class="feat-title">NASA-STD Safety Standards</span>
 </div>
 <div class="feat-card-body">
-Screening automatico di conformità per simulazioni e test contro le norme NASA-STD-3001 e NASA-STD-6001: soglie O<sub>2</sub>, velocità aria, tossicità e margini di sicurezza.
+Automatic compliance screening of simulations and tests against NASA-STD-3001 and NASA-STD-6001: O<sub>2</sub> thresholds, air velocity, toxicity and safety margins.
 </div>
 </div>
 """)
@@ -675,10 +711,10 @@ Screening automatico di conformità per simulazioni e test contro le norme NASA-
         html_clean("""
 <div class="feat-card">
 <div class="feat-card-header" style="color:#c084fc;">
-<span>📄</span> Report Scientifici & Paper NASA
+<span class="feat-title">NASA Scientific Reports & Papers</span>
 </div>
 <div class="feat-card-body">
-Ricerca semantica ibrida (Chroma + BM25) su oltre 320 pagine di letteratura tecnica, visualizzatore di pagine originali e sommari strutturati per ogni esperimento.
+Hybrid semantic search (Chroma + BM25) over more than 320 pages of technical literature, an original page viewer and structured summaries for each experiment.
 </div>
 </div>
 """)
@@ -687,17 +723,17 @@ Ricerca semantica ibrida (Chroma + BM25) su oltre 320 pagine di letteratura tecn
     st.divider()
 
     # 5. Guida Rapida in 4 Step
-    st.markdown("### 🚀 Guida Rapida all'Uso in 4 Step")
-    st.caption("Come condurre un'analisi di sicurezza antincendio aerospaziale completa con EFESTO.")
+    st.markdown("### Quick Start in 4 Steps")
+    st.caption("How to run a complete aerospace fire safety analysis with EFESTO.")
 
     s1, s2, s3, s4 = st.columns(4)
     with s1:
         html_clean("""
 <div class="step-item">
 <div class="step-badge">STEP 1</div>
-<div class="step-title">Filtra la Missione</div>
+<div class="step-title">Filter the Mission</div>
 <div class="step-desc">
-Nella Dashboard seleziona il codice esperimento NASA PSI (es. <code>PSI-117</code>) o mantieni la vista complessiva.
+In the Dashboard, select the NASA PSI experiment code (e.g. <code>PSI-117</code>) or keep the overall view.
 </div>
 </div>
 """)
@@ -706,9 +742,9 @@ Nella Dashboard seleziona il codice esperimento NASA PSI (es. <code>PSI-117</cod
         html_clean("""
 <div class="step-item">
 <div class="step-badge">STEP 2</div>
-<div class="step-title">Simula e Calcola</div>
+<div class="step-title">Simulate and Compute</div>
 <div class="step-desc">
-Apri il simulatore <b>PSI</b> o il modulo <b>Artemis MPH</b> nelle schede operative per modellare la combustione a gravità lunare.
+Open the <b>PSI</b> simulator or the <b>Artemis MPH</b> module in the operational tabs to model combustion at lunar gravity.
 </div>
 </div>
 """)
@@ -717,9 +753,9 @@ Apri il simulatore <b>PSI</b> o il modulo <b>Artemis MPH</b> nelle schede operat
         html_clean("""
 <div class="step-item">
 <div class="step-badge">STEP 3</div>
-<div class="step-title">Interroga l'IA</div>
+<div class="step-title">Ask the AI</div>
 <div class="step-desc">
-Fai domande all'agente in linguaggio naturale (es. <i>"Qual è il diametro di estinzione per l'eptano a 1 atm?"</i>) con risposte e grafici.
+Ask the agent questions in natural language (e.g. <i>"What is the extinction diameter for heptane at 1 atm?"</i>) and get answers and charts.
 </div>
 </div>
 """)
@@ -728,9 +764,9 @@ Fai domande all'agente in linguaggio naturale (es. <i>"Qual è il diametro di es
         html_clean("""
 <div class="step-item">
 <div class="step-badge">STEP 4</div>
-<div class="step-title">Verifica ed Esporta</div>
+<div class="step-title">Verify and Export</div>
 <div class="step-desc">
-Controlla la conformità con NASA-STD nella scheda Report & Norme ed esporta tabelle e grafici direttamente in CSV o Excel.
+Check NASA-STD compliance in the Safety Standards tab and export tables and charts directly to CSV or Excel.
 </div>
 </div>
 """)
@@ -740,7 +776,7 @@ Controlla la conformità con NASA-STD nella scheda Report & Norme ed esporta tab
     # 6. Call To Action Finale (stesso pulsante unico)
     b_col1, b_col2, b_col3 = st.columns([1, 2.5, 1])
     with b_col2:
-        st.button("🔨 Entra nella Dashboard EFESTO", type="primary", on_click=go_to_dashboard, key="bottom_enter_cta", width="stretch")
+        st.button("Enter the EFESTO Dashboard", type="primary", on_click=go_to_dashboard, key="bottom_enter_cta", width="stretch")
 
     # 7. Crediti del Team
     st.markdown("<div style='height: 1.2rem;'></div>", unsafe_allow_html=True)
@@ -749,16 +785,16 @@ Controlla la conformità con NASA-STD nella scheda Report & Norme ed esporta tab
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
 <div>
 <div style="font-weight:700; color:#f8fafc; font-size:1rem; display:flex; align-items:center; gap:8px;">
-<span>⚒️</span> EFESTO — Flame in Freefall Platform
+EFESTO — Flame in Freefall Platform
 </div>
 <div style="font-size:0.83rem; color:#94a3b8; margin-top:0.25rem;">
-Progettato e sviluppato per il supporto ingegneristico alla sicurezza antincendio negli habitat lunari pressurizzati (Programma Artemis).<br>
-Dati scientifici e sperimentali aperti per gentile concessione del <b>NASA Physical Sciences Informatics (PSI) System</b>.
+Designed and developed to provide engineering support for fire safety in pressurized lunar habitats (Artemis Program).<br>
+Open scientific and experimental data courtesy of the <b>NASA Physical Sciences Informatics (PSI) System</b>.
 </div>
 </div>
 <div style="text-align:right;">
 <div style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:#38bdf8; font-weight:600;">
-Versione: 2.4.0 · Artemis & PSI-117
+Version: 2.4.0 · Artemis & PSI-117
 </div>
 <div style="font-size:0.72rem; color:#64748b; margin-top:0.2rem;">
 Stack: Streamlit · DuckDB · Chroma · Claude Haiku · Plotly
@@ -776,30 +812,30 @@ def render_dashboard():
     # BARRA DI CONTROLLO SUPERIORE CENTRATA (Sostituisce la sidebar)
     top_c1, top_c2, top_c3 = st.columns([1.6, 4.4, 2.2], vertical_alignment="center")
     with top_c1:
-        if st.button("← Torna alla Home", key="top_back_home", width="stretch"):
+        if st.button("← Back to Home", key="top_back_home", width="stretch"):
             go_to_home()
             st.rerun()
 
     with top_c2:
         html_clean("""
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.9rem;">⚒️</span>
+          <img src="{logo}" alt="NAVI logo" style="width:52px; height:52px; border-radius:50%; box-shadow:0 0 0 1px rgba(203,213,225,0.25);">
           <div>
             <h3 style="margin:0; font-size:1.35rem; font-weight:800; background:linear-gradient(90deg, #f59e0b 0%, #ef4444 40%, #38bdf8 100%); -webkit-background-clip:text; color:transparent; line-height:1.2;">
-              EFESTO — Dashboard Operativa
+              EFESTO — Operations Dashboard
             </h3>
             <div style="font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono',monospace;">Flame in Freefall · NASA Microgravity Fire Safety</div>
           </div>
         </div>
-        """)
+        """.replace("{logo}", logo_data_uri()))
 
     with top_c3:
         selected_tag = st.selectbox(
-            "Filtro Esperimento NASA PSI",
+            "NASA PSI experiment filter",
             [ALL] + store.experiment_tags,
             key="exp_tag",
             label_visibility="collapsed",
-            help="Filtra dataset, serie e ricerche per codice esperimento NASA PSI."
+            help="Filter datasets, series and searches by NASA PSI experiment code."
         )
 
     tag = None if selected_tag == ALL else selected_tag
@@ -834,25 +870,25 @@ def render_dashboard():
     # TAB 1: CO-PILOTA IA (Ambiente dedicato esclusivamente all'assistente)
     # -----------------------------------------------------------------------
     with tab_agent:
-        st.markdown("#### 💬 Co-pilota Ingegneristico IA EFESTO")
-        st.caption("Ambiente dedicato per l'interrogazione conversazionale avanzata sui dati fisici NASA PSI e sulla documentazione scientifica. "
-                   "Formula query SQL sandbox, genera grafici Plotly e cita pagine dei report.")
+        st.markdown("#### EFESTO AI Engineering Co-pilot")
+        st.caption("A dedicated space for conversational queries on NASA PSI physical data and scientific documentation. "
+                   "It writes sandboxed SQL queries, generates Plotly charts and cites report pages.")
 
         c_chat_head1, c_chat_head2 = st.columns([5, 1.8], vertical_alignment="center")
         with c_chat_head1:
-            st.markdown(f"**Esperimento attivo per l'agente:** `{selected_tag}`")
+            st.markdown(f"**Active experiment for the agent:** `{selected_tag}`")
         with c_chat_head2:
-            if st.button("🗑️ Nuova conversazione", key="agent_tab_clear_chat", width="stretch"):
+            if st.button("New conversation", key="agent_tab_clear_chat", width="stretch"):
                 st.session_state.messages, st.session_state.api_history = [], []
                 st.rerun()
 
         chat_box = st.container()
         with chat_box:
             if not st.session_state.messages:
-                st.info("💡 **Co-pilota pronto.** Prova a chiedere:\n"
-                        "- *'Confronta il diametro di estinzione sperimentale e simulato per l'eptano al variare della pressione'*\n"
-                        "- *'Spiegami il fenomeno delle cool flames osservato in microgravità'* \n"
-                        "- *'Quali sono i limiti di sicurezza NASA-STD per la frazione di ossigeno?'*")
+                st.info("**Co-pilot ready.** Try asking:\n"
+                        "- *'Compare the experimental and simulated extinction diameter for heptane as pressure varies'*\n"
+                        "- *'Explain the cool flame phenomenon observed in microgravity'* \n"
+                        "- *'What are the NASA-STD safety limits for the oxygen fraction?'*")
             for i, m in enumerate(st.session_state.messages):
                 with st.chat_message(m["role"]):
                     if m["role"] == "assistant":
@@ -861,9 +897,9 @@ def render_dashboard():
                         st.markdown(m["content"])
 
         if not api_key:
-            st.warning("Chiave `ANTHROPIC_API_KEY` non rilevata in `st.secrets`: l'assistente IA è disattivato. I simulatori, le serie sperimentali e i report rimangono consultabili.")
+            st.warning("`ANTHROPIC_API_KEY` not found in `st.secrets`: the AI assistant is disabled. The simulators, experimental series and reports are still available.")
 
-        query = st.chat_input("Fai una domanda all'assistente IA (es: confronta il diametro di estinzione sperimentale e simulato)", disabled=not api_key)
+        query = st.chat_input("Ask the AI assistant a question (e.g. compare the experimental and simulated extinction diameter)", disabled=not api_key)
 
         if query and api_key:
             agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
@@ -873,21 +909,21 @@ def render_dashboard():
                 with st.chat_message("user"):
                     st.markdown(query)
                 with st.chat_message("assistant"):
-                    with st.status("⚒️ EFESTO sta analizzando i dati NASA e preparando la risposta…", expanded=True) as status:
+                    with st.status("EFESTO is analyzing the NASA data and preparing the answer…", expanded=True) as status:
                         try:
                             result = agent.run(st.session_state.api_history, query, tag, on_event=status.write)
-                            status.update(label="Analisi completata", state="complete", expanded=False)
+                            status.update(label="Analysis complete", state="complete", expanded=False)
                         except anthropic.AuthenticationError:
-                            status.update(label="Chiave API non valida", state="error")
+                            status.update(label="Invalid API key", state="error")
                             result = None
                         except anthropic.RateLimitError:
-                            status.update(label="Limite di richieste raggiunto: riprova tra poco", state="error")
+                            status.update(label="Rate limit reached: try again shortly", state="error")
                             result = None
                         except anthropic.APIConnectionError:
-                            status.update(label="Errore di connessione all'API Anthropic", state="error")
+                            status.update(label="Connection error with the Anthropic API", state="error")
                             result = None
                         except anthropic.APIStatusError as e:
-                            status.update(label=f"Errore API ({e.status_code})", state="error")
+                            status.update(label=f"API error ({e.status_code})", state="error")
                             result = None
 
                     if result is not None:
@@ -906,21 +942,20 @@ def render_dashboard():
     # TAB 2: DATI & SERIE SPERIMENTALI (Ambiente grafici ed esplorazione)
     # -----------------------------------------------------------------------
     with tab_data:
-        st.markdown("#### 📊 Dati & Serie Sperimentali NASA PSI")
-        st.caption("Ambiente dedicato per l'analisi visiva delle serie storiche, il confronto multivariabile e l'esportazione dati.")
+        st.markdown("#### NASA PSI Experimental Data & Series")
+        st.caption("A dedicated space for visual analysis of historical series, multivariable comparison and data export.")
 
         if ds_f.empty:
-            st.info("Nessun dataset disponibile per il filtro selezionato.")
+            st.info("No datasets available for the selected filter.")
         else:
             series_count_by_ds = series_f.groupby("dataset").size().to_dict() if not series_f.empty else {}
 
             def format_dataset_label(r):
                 n_ser = series_count_by_ds.get(r.dataset, 0)
-                icon = "📈" if n_ser > 0 else "📁"
-                tag_label = f" [{n_ser} serie]" if n_ser > 0 else " [metadati/immagini]"
+                tag_label = f" [{n_ser} series]" if n_ser > 0 else " [metadata/images]"
                 fig_str = f" · {r.figure}" if pd.notna(r.figure) and r.figure else ""
                 pub_str = f" ({r.journal} {r.year})" if pd.notna(r.journal) and r.journal else ""
-                return f"{icon} {r.dataset}{fig_str}{pub_str}{tag_label}"
+                return f"{r.dataset}{fig_str}{pub_str}{tag_label}"
 
             labels = {r.dataset: format_dataset_label(r) for r in ds_f.itertuples()}
             inv = {v: k for k, v in labels.items()}
@@ -932,14 +967,14 @@ def render_dashboard():
                 st.session_state.pop("dash_ds", None)
 
             c1, c2 = st.columns([3, 2])
-            chosen_label = c1.selectbox("Seleziona Dataset da esplorare", list(inv), key="dash_ds")
+            chosen_label = c1.selectbox("Select a dataset to explore", list(inv), key="dash_ds")
             dataset = inv[chosen_label]
             s_ds = series_f[series_f.dataset == dataset] if not series_f.empty else pd.DataFrame()
 
             if s_ds.empty:
-                st.info("ℹ️ **Dataset di tipo metadati / archivio fotografico / log di test (es. sequenze SAFFIRE-III).**\n\n"
-                        "Questo file raccoglie metadati, log di calibrazione e sequenze di immagini spaziali senza serie scalari x/y plottabili. "
-                        "È comunque possibile consultare o scaricare l'intera tabella originale sottostante in formato CSV o Excel.")
+                st.info("**Metadata / photo archive / test log dataset (e.g. SAFFIRE-III sequences).**\n\n"
+                        "This file contains metadata, calibration logs and space image sequences without plottable scalar x/y series. "
+                        "You can still browse or download the full original table below as CSV or Excel.")
             else:
                 yvars = s_ds.y_var.value_counts().index.tolist()
                 ydesc = s_ds.drop_duplicates("y_var").set_index("y_var").y_description.to_dict()
@@ -948,7 +983,7 @@ def render_dashboard():
                     st.session_state.dash_y = next(k for k, v in ylab.items() if v == target["y_var"])
                 if st.session_state.get("dash_y") not in ylab:
                     st.session_state.pop("dash_y", None)
-                y_var = ylab[c2.selectbox("Grandezza misurata (asse y)", list(ylab), key="dash_y")]
+                y_var = ylab[c2.selectbox("Measured quantity (y axis)", list(ylab), key="dash_y")]
                 s_sel = s_ds[s_ds.y_var == y_var]
                 opts = s_sel.series_id.tolist()
                 fmt = s_sel.set_index("series_id").apply(
@@ -960,12 +995,12 @@ def render_dashboard():
                 if target and target["dataset"] == dataset and target["y_var"] == y_var:
                     st.session_state.dash_sel = [fmt[i] for i in target["series_ids"] if i in fmt][:8]
                     st.session_state.dash_logx, st.session_state.dash_logy = target["log_x"], target["log_y"]
-                    st.success("🔬 Vista impostata automaticamente dal suggerimento dell'assistente IA.")
+                    st.success("View set automatically from the AI assistant's suggestion.")
                 elif st.session_state.get("dash_sel_ctx") != (dataset, y_var) or "dash_sel" not in st.session_state:
                     st.session_state.dash_sel = list(slab)[:8]
                 st.session_state.dash_sel_ctx = (dataset, y_var)
                 st.session_state.dash_sel = [x for x in st.session_state.dash_sel if x in slab]
-                chosen = [slab[x] for x in c3.multiselect("Serie da visualizzare", list(slab), max_selections=8, key="dash_sel")]
+                chosen = [slab[x] for x in c3.multiselect("Series to display", list(slab), max_selections=8, key="dash_sel")]
                 log_x = c4.toggle("log x", key="dash_logx")
                 log_y = c5.toggle("log y", key="dash_logy")
 
@@ -975,181 +1010,183 @@ def render_dashboard():
                         st.plotly_chart(series_chart(pts, log_x, log_y, title=f"{dataset}: {ydesc.get(y_var, y_var)}"),
                                         width="stretch", key="dash_series")
                         info = ds_f.set_index("dataset").loc[dataset]
-                        st.caption(f"Fonte: `{info.source_file}` [{info.experiment_tag}]"
+                        st.caption(f"Source: `{info.source_file}` [{info.experiment_tag}]"
                                    + (f" — {info.journal} {info.year}, {info.figure} · [DOI]({info.reference_doi})" if info.reference_doi else ""))
 
                         unit = pts.y_unit.iloc[0] if pd.notna(pts.y_unit.iloc[0]) else ""
                         m = st.columns(4)
-                        m[0].metric("Punti selezionati", len(pts))
+                        m[0].metric("Selected points", len(pts))
                         m[1].metric("y min", f"{pts.y.min():.4g} {unit}")
                         m[2].metric("y max", f"{pts.y.max():.4g} {unit}")
-                        m[3].metric("y medio", f"{pts.y.mean():.4g} {unit}")
+                        m[3].metric("y mean", f"{pts.y.mean():.4g} {unit}")
 
-                        with st.expander("📋 Tabella dei punti selezionati", expanded=False):
+                        with st.expander("Selected points table", expanded=False):
                             cols = ["series_id", "series_label", "kind", "fuel", "pressure_atm", "d0_mm", "x_var", "x_unit", "x",
                                     "y_var", "y_unit", "y", "source_file", "x_column", "y_column"]
                             st.dataframe(pts[cols], width="stretch", hide_index=True, height=360)
-                            download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"fonti": [info.source_file], "DOI": info.reference_doi})
+                            download_buttons(pts[cols], f"{dataset}_{y_var}", "dash_pts", {"sources": [info.source_file], "DOI": info.reference_doi})
                     else:
-                        st.warning("Nessun punto disponibile per le serie selezionate.")
+                        st.warning("No points available for the selected series.")
 
-            with st.expander("📄 Tabella originale completa (formato NASA con download CSV / Excel)"):
+            with st.expander("Full original table (NASA format, CSV / Excel download)"):
                 raw = store.raw_table(dataset)
                 st.dataframe(raw, width="stretch", hide_index=True, height=360)
-                download_buttons(raw, f"originale_{dataset}", "dash_raw", {"file sorgente": labels[dataset]})
+                download_buttons(raw, f"original_{dataset}", "dash_raw", {"source file": labels[dataset]})
 
     # -----------------------------------------------------------------------
     # TAB 3: SIMULATORE PSI (Ambiente simulatore parametrico)
     # -----------------------------------------------------------------------
     with tab_psi:
-        html_clean("<h4>🪐 Laboratorio NASA PSI • Mappe Interattive & Simulazioni Parametriche (g / g<sub>e</sub>)</h4>")
-        st.caption("Simulatore parametrico multi-esperimento basato sul Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
+        html_clean("<h4>NASA PSI Laboratory • Interactive Maps & Parametric Simulations (g / g<sub>e</sub>)</h4>")
+        st.caption("Multi-experiment parametric simulator based on the Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
         components.html(PSI_DASHBOARD_HTML, height=1150, scrolling=True)
 
     # -----------------------------------------------------------------------
     # TAB 4: MODULO LUNARE MPH (Ambiente simulatore modulo lunare)
     # -----------------------------------------------------------------------
     with tab_mph:
-        html_clean("<h4>🌙 Artemis MPH • Simulatore Propagazione Incendio in Gravità Lunare (0.165 g<sub>e</sub>)</h4>")
-        st.caption("Simulatore aerospaziale multifisico per il modulo abitativo lunare pressurizzato (Multi-Purpose Habitat).")
+        html_clean("<h4>Artemis MPH • Fire Spread Simulator at Lunar Gravity (0.165 g<sub>e</sub>)</h4>")
+        st.caption("Multiphysics aerospace simulator for the pressurized lunar habitat module (Multi-Purpose Habitat).")
         components.html(MPH_DASHBOARD_HTML, height=1150, scrolling=True)
 
     # -----------------------------------------------------------------------
     # TAB 5: REPORT SCIENTIFICI PSI (Ambiente documentazione & ricerca)
     # -----------------------------------------------------------------------
     with tab_reports:
-        st.markdown("#### 📚 Report Scientifici NASA PSI")
-        st.caption("Consultazione delle pubblicazioni originali, sommari analitici e ricerca semantica (BM25 + Chroma) con visualizzatore di pagine.")
+        st.markdown("#### NASA PSI Scientific Reports")
+        st.caption("Browse the original publications, analytical summaries and semantic search (BM25 + Chroma) with a page viewer.")
 
         docs_f = filt(store.documents)
         exp_f = filt(store.experiments) if not store.experiments.empty else store.experiments
         for e in exp_f.itertuples():
             if e.overview:
-                st.markdown(f"<div class='card'><b>🧪 {e.experiment_tag}</b><br>{e.overview}</div>", unsafe_allow_html=True)
-        st.subheader("📑 Documenti & Pubblicazioni")
+                st.markdown(f"<div class='card'><b>{e.experiment_tag}</b><br>{plain(e.overview)}</div>", unsafe_allow_html=True)
+        st.subheader("Documents & Publications")
         for r in docs_f.itertuples():
-            with st.expander(f"{r.doc_type} · {r.title} — {r.n_pages} pagine"):
-                st.caption(f"`{r.file_name}` · {r.experiment_tag}" + (f" · {r.author}" if r.author else "")
-                           + f" · sommario {r.summary_source}")
-                st.markdown(r.summary)
+            with st.expander(f"{r.doc_type} · {plain(r.title)} — {r.n_pages} pages"):
+                st.caption(f"`{r.file_name}` · {r.experiment_tag}" + (f" · {plain(r.author)}" if r.author else "")
+                           + f" · summary {r.summary_source}")
+                st.markdown(plain(r.summary))
                 findings = json.loads(r.key_findings_json or "[]")
                 if findings:
-                    st.markdown("**Risultati chiave**")
+                    st.markdown("**Key findings**")
                     for f in findings:
-                        st.markdown(f"- {f['finding']} _(pp. {', '.join(map(str, f['pages']))})_")
+                        st.markdown(f"- {plain(f['finding'])} _(pp. {', '.join(map(str, f['pages']))})_")
                 topics = json.loads(r.topics_json or "[]")
                 if topics:
                     st.markdown("".join(f"<span class='pill'>{t}</span>" for t in topics), unsafe_allow_html=True)
                 if r.experimental_conditions:
-                    st.markdown(f"**Condizioni sperimentali:** {r.experimental_conditions}")
+                    st.markdown(f"**Experimental conditions:** {plain(r.experimental_conditions)}")
                 outline = json.loads(r.outline_json or "[]")
                 if outline:
-                    st.markdown("**Indice**")
-                    st.dataframe(pd.DataFrame(outline).rename(columns={"section": "Sezione", "start_page": "Pagina"}),
+                    st.markdown("**Table of contents**")
+                    st.dataframe(pd.DataFrame(outline).rename(columns={"section": "Section", "start_page": "Page"}),
                                  hide_index=True, width="stretch", height=min(300, 38 + 35 * len(outline)))
 
-        st.subheader("🔎 Cerca e leggi nei report")
+        st.subheader("Search and read the reports")
         c1, c2 = st.columns([3, 2])
-        q = c1.text_input("Ricerca nei report (semantica + parole chiave in inglese)", placeholder="cool flame extinction diameter", key="docs_q")
+        q = c1.text_input("Search the reports (semantic + keywords)", placeholder="cool flame extinction diameter", key="docs_q")
         doc_opts = docs_f.file_name.tolist()
-        doc_sel = c2.selectbox("Documento specifico", ["Tutti"] + doc_opts, key="docs_sel")
+        doc_sel = c2.selectbox("Specific document", ["All"] + doc_opts, key="docs_sel")
         if q:
-            hits = index.search(q, experiment_tag=tag, file_name=None if doc_sel == "Tutti" else doc_sel, top_k=8)
+            hits = index.search(q, experiment_tag=tag, file_name=None if doc_sel == "All" else doc_sel, top_k=8)
             for h in hits:
                 st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
                             + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
                 st.caption(h.text[:500].replace("\n", " ") + "…")
-        if doc_sel != "Tutti":
+        if doc_sel != "All":
             n_pages = int(docs_f.set_index("file_name").loc[doc_sel, "n_pages"])
-            page = st.number_input("Pagina", 1, n_pages, 1, key="docs_page") if n_pages > 1 else 1
+            page = st.number_input("Page", 1, n_pages, 1, key="docs_page") if n_pages > 1 else 1
             row = index.read_pages(doc_sel, int(page), int(page))
             if not row.empty:
                 r = row.iloc[0]
-                st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {doc_sel}, p. {page}]")
+                st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {doc_sel}, p. {page}]")
                 st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------
     # TAB 6: NORME DI SICUREZZA NASA (Ambiente verifica standard astronautici)
     # -----------------------------------------------------------------------
     with tab_safety:
-        st.markdown("#### 🛡️ Norme di Sicurezza NASA-STD (3001 & 6001)")
-        st.caption("Ambiente per il controllo automatico di conformità aerospaziale: limiti di progetto, verifica serie e screening file di simulazione.")
+        st.markdown("#### NASA-STD Safety Standards (3001 & 6001)")
+        st.caption("Automatic aerospace compliance checks: design limits, series verification and simulation file screening.")
 
         def show_checks(res: pd.DataFrame, key: str, title: str):
             if res.empty:
-                st.info("Nessuna grandezza corrisponde a un limite del catalogo.")
+                st.info("No quantity matches a limit in the catalog.")
                 return
-            view = res.assign(esito=res.esito.map(ESITO_ICON).fillna(res.esito))
-            cols = [c for c in ("esito", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
-                                "value_min", "value_max", "n_violations", "worst_value", "margin", "confronto", "unit_note",
+            view = res.assign(result=res.esito.map(ESITO_ICON).fillna(res.esito))
+            if "confronto" in view.columns:
+                view = view.rename(columns={"confronto": "comparison"})
+            cols = [c for c in ("result", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
+                                "value_min", "value_max", "n_violations", "worst_value", "margin", "comparison", "unit_note",
                                 "citation") if c in view.columns]
             m = st.columns(3)
-            m[0].metric("Verifiche", len(res))
-            m[1].metric("Non conformi", int(((res.esito == "non conforme")).sum()))
-            m[2].metric("In zona di rischio", int(((res.esito == "in zona di rischio")).sum()))
+            m[0].metric("Checks", len(res))
+            m[1].metric("Non-compliant", int(((res.esito == "non conforme")).sum()))
+            m[2].metric("In risk zone", int(((res.esito == "in zona di rischio")).sum()))
             st.dataframe(view[cols], width="stretch", hide_index=True, height=min(420, 38 + 35 * len(view)))
-            download_buttons(res, title, key, {"fonte limiti": "data/safety/safety_limits.parquet"})
+            download_buttons(view[cols], title, key, {"limits source": "data/safety/safety_limits.parquet"})
 
         if safety is None:
-            st.warning("Database delle norme di sicurezza non disponibile. Generalo con `python build_safety_db.py`."
-                       + (f" \nDettaglio: {safety_error}" if safety_error else ""))
+            st.warning("Safety standards database not available. Build it with `python build_safety_db.py`."
+                       + (f" \nDetails: {safety_error}" if safety_error else ""))
         else:
-            st.subheader("📏 Limiti Numerici di Progetto")
+            st.subheader("Numerical Design Limits")
             lim = safety.limits
-            lim_view = lim.assign(limite=[format_limit(r) for r in lim.itertuples()],
-                                  automatico=lim.get("applies_by_default", True))
-            st.dataframe(lim_view[["limit_id", "parameter", "limite", "limit_type", "scope", "automatico", "citation"]],
+            lim_view = lim.assign(limit=[format_limit(r) for r in lim.itertuples()],
+                                  automatic=lim.get("applies_by_default", True))
+            st.dataframe(lim_view[["limit_id", "parameter", "limit", "limit_type", "scope", "automatic", "citation"]],
                          width="stretch", hide_index=True, height=min(420, 38 + 35 * len(lim_view)))
-            with st.expander("Testo originale e note di ogni limite"):
+            with st.expander("Original text and notes for each limit"):
                 for r in lim.itertuples():
                     st.markdown(f"**{r.limit_id}** — {r.description}")
-                    st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · valore non riportato numericamente nel testo"))
+                    st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · value not stated numerically in the text"))
             if not safety.requirements.empty:
-                with st.expander(f"📜 Requisiti Qualitativi NASA-STD-3001 ({len(safety.requirements)})"):
+                with st.expander(f"NASA-STD-3001 Qualitative Requirements ({len(safety.requirements)})"):
                     for r in safety.requirements.itertuples():
                         st.markdown(f"**[{r.requirement_id}] {r.title}** — {r.text}")
                         st.caption(r.citation)
 
-            st.subheader("🧪 Verifica delle Serie di Simulazione dello Store")
+            st.subheader("Verification of Stored Simulation Series")
             c1, c2, c3 = st.columns([3, 1, 1])
-            kinds = c1.multiselect("Tipi di serie", list(KIND_LABELS), default=["simulation", "model"],
+            kinds = c1.multiselect("Series types", list(KIND_LABELS), default=["simulation", "model"],
                                    format_func=lambda k: KIND_LABELS.get(k, k), key="saf_kinds")
-            include_all = c2.toggle("Limiti opzionali", key="saf_all", help="Includi i limiti ad ambito ristretto (volumi inertizzati, capacità di dispositivi)")
-            allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Confronti indicativi con grandezze affini (es. flame_length vs burn_length)")
+            include_all = c2.toggle("Optional limits", key="saf_all", help="Include narrow-scope limits (inerted volumes, device capacities)")
+            allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Indicative comparisons with related quantities (e.g. flame_length vs burn_length)")
             if kinds:
                 res = safety.check_store(store, kinds=kinds, include_all=include_all, allow_proxy=allow_proxy)
                 if tag is not None and not res.empty and "experiment_tag" in res:
                     res = res[res.experiment_tag == tag]
-                show_checks(res, "saf_store", "verifica_norme_serie")
+                show_checks(res, "saf_store", "standards_check_series")
 
-            st.markdown("**Verifica un file di simulazione utente** (CSV o Excel)")
-            st.caption("Riconoscimento automatico colonne: `temperature_K`, `O2 [%]`, `x_o2`, `air_velocity_m_s`, `burn_length_mm`...")
-            up = st.file_uploader("Carica file di simulazione", type=["csv", "xlsx"], key="saf_upload")
+            st.markdown("**Check a user simulation file** (CSV or Excel)")
+            st.caption("Automatic column detection: `temperature_K`, `O2 [%]`, `x_o2`, `air_velocity_m_s`, `burn_length_mm`...")
+            up = st.file_uploader("Upload simulation file", type=["csv", "xlsx"], key="saf_upload")
             if up is not None:
                 try:
                     sim = pd.read_csv(up) if up.name.lower().endswith(".csv") else pd.read_excel(up)
                     res = safety.check_any(sim, include_all=include_all, allow_proxy=allow_proxy)
-                    show_checks(res, "saf_upload_res", f"verifica_norme_{up.name.rsplit('.', 1)[0]}")
+                    show_checks(res, "saf_upload_res", f"standards_check_{up.name.rsplit('.', 1)[0]}")
                 except Exception as e:
-                    st.error(f"Impossibile verificare il file: {e}")
+                    st.error(f"Unable to check the file: {e}")
 
-            st.subheader("🔎 Cerca e leggi nelle norme NASA-STD")
+            st.subheader("Search and read the NASA-STD standards")
             c1, c2 = st.columns([3, 2])
-            sq = c1.text_input("Ricerca nelle norme (semantica + parole chiave in inglese)", placeholder="oxygen concentration flammability limit", key="saf_q")
+            sq = c1.text_input("Search the standards (semantic + keywords)", placeholder="oxygen concentration flammability limit", key="saf_q")
             sdocs = sorted(safety_index.pages.file_name.unique())
-            sdoc = c2.selectbox("Documento normativo", ["Tutti"] + sdocs, key="saf_doc")
+            sdoc = c2.selectbox("Standard document", ["All"] + sdocs, key="saf_doc")
             if sq:
-                for h in safety_index.search(sq, file_name=None if sdoc == "Tutti" else sdoc, top_k=8):
+                for h in safety_index.search(sq, file_name=None if sdoc == "All" else sdoc, top_k=8):
                     st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
                                 + f" <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
                     st.caption(h.text[:500].replace("\n", " ") + "…")
-            if sdoc != "Tutti":
+            if sdoc != "All":
                 n_pages = int(safety_index.pages[safety_index.pages.file_name == sdoc].page_number.max())
-                page = st.number_input("Pagina norma", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
+                page = st.number_input("Standard page", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
                 row = safety_index.read_pages(sdoc, int(page), int(page))
                 if not row.empty:
                     r = row.iloc[0]
-                    st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {sdoc}, p. {page}]")
+                    st.caption(f"Section: {r.section or 'n/a'} · [Source: {r.experiment_tag} | {sdoc}, p. {page}]")
                     st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
 

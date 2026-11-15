@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Artemis MPH • Simulatore Propagazione Incendio in Gravità Lunare (0.165 g_e)</title>
+  <title>Artemis MPH • Fire Spread Simulator at Lunar Gravity (0.165 g_e)</title>
 
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -100,7 +100,7 @@
   <div id="toastBox" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-4 opacity-0">
     <div class="flex items-center gap-2.5 bg-[#0f172a] border border-sky-400/50 text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium">
       <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
-      <span id="toastText">Parametro aggiornato</span>
+      <span id="toastText">Parameter updated</span>
     </div>
   </div>
 
@@ -123,11 +123,11 @@
               ARTEMIS SURFACE HABITAT • MPH (ASI / NASA)
             </span>
             <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 font-mono text-[10px] font-bold text-amber-300">
-              g_Luna = 0.165 g_e (1.62 m/s²)
+              g_Moon = 0.165 g_e (1.62 m/s²)
             </span>
           </div>
           <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Simulatore di Propagazione Incendio &amp; Sicurezza Antincendio nel Modulo Lunare MPH
+            Fire Spread &amp; Fire Safety Simulator for the MPH Lunar Module
           </h1>
         </div>
       </div>
@@ -148,7 +148,7 @@
           <span id="hdrVf" class="text-sky-400 font-bold">1.48 cm/s</span>
         </div>
         <div id="hdrRiskBadge" class="bg-amber-500/15 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-xl font-bold">
-          RISCHIO MODERATO • PROPAGAZIONE ATTIVA
+          MODERATE RISK • ACTIVE SPREAD
         </div>
       </div>
     </div>
@@ -162,35 +162,35 @@
     <!-- PRESET ATMOSFERE SPAZIALI ARTEMIS / NASA -->
     <section class="card-panel rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mr-1">Preset Atmosfera MPH:</span>
+        <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mr-1">MPH atmosphere presets:</span>
         <button type="button" data-p="56.5" data-o2="34.0" data-u="12" class="env-preset-btn px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-400/60 text-xs font-semibold text-sky-200 transition cursor-pointer">
           Artemis Exploration Atmosphere (56.5 kPa • 34% O₂)
         </button>
         <button type="button" data-p="70.3" data-o2="26.5" data-u="12" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-slate-200 transition cursor-pointer">
-          Atmosfera Intermedia (70.3 kPa • 26.5% O₂)
+          Intermediate Atmosphere (70.3 kPa • 26.5% O₂)
         </button>
         <button type="button" data-p="101.3" data-o2="21.0" data-u="15" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-slate-200 transition cursor-pointer">
-          Standard ISS / Terrestre (101.3 kPa • 21% O₂)
+          ISS / Earth Standard (101.3 kPa • 21% O₂)
         </button>
         <button type="button" data-p="45.0" data-o2="36.0" data-u="8" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-amber-200 transition cursor-pointer">
-          Pre-EVA Depressurizzata (45.0 kPa • 36% O₂)
+          Depressurized Pre-EVA (45.0 kPa • 36% O₂)
         </button>
       </div>
 
       <!-- Controlli Riproduzione Simulazione + Pulsante Chiusura Tab/Pannello Sinistro -->
       <div class="flex items-center gap-2 flex-wrap">
         <button id="btnToggleAside" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition cursor-pointer flex items-center gap-1.5">
-          <span id="btnToggleAsideIcon">◀</span>
-          <span id="btnToggleAsideText">Chiudi Pannello Sinistro</span>
+          <span id="btnToggleAsideIcon">‹</span>
+          <span id="btnToggleAsideText">Close Left Panel</span>
         </button>
         <button id="btnPlayPause" type="button" class="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-xs font-bold text-emerald-300 transition cursor-pointer">
-          ⏸ Pausa Simulazione
+          Pause Simulation
         </button>
         <button id="btnResetSim" type="button" class="px-3.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/50 text-xs font-bold text-sky-300 transition cursor-pointer">
-          ↺ Riavvia Accensione (t = 0)
+          ↺ Restart Ignition (t = 0)
         </button>
         <button id="btnSuppress" type="button" class="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/50 text-xs font-bold text-rose-300 transition cursor-pointer">
-          🧯 Attiva Soppressione (N₂ / Fine Water Mist)
+          Activate Suppression (N₂ / Fine Water Mist)
         </button>
       </div>
     </section>
@@ -206,36 +206,36 @@
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-bold text-white flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-              1. Materiali Interni del Modulo MPH
+              1. MPH Module Interior Materials
             </h2>
-            <button id="btnCloseAsideDirect" type="button" title="Chiudi questo pannello" class="text-[11px] font-mono text-slate-400 hover:text-sky-300 bg-[#070b14] border border-[#1e293b] px-2 py-0.5 rounded cursor-pointer transition">
-              ✕ Chiudi
+            <button id="btnCloseAsideDirect" type="button" title="Close this panel" class="text-[11px] font-mono text-slate-400 hover:text-sky-300 bg-[#070b14] border border-[#1e293b] px-2 py-0.5 rounded cursor-pointer transition">
+              Close
             </button>
           </div>
 
           <div class="space-y-2">
             <label for="materialSelect" class="block text-xs text-slate-300 font-medium">
-              Scegli il rivestimento o componente interno soggetto a innesco:
+              Choose the interior lining or component exposed to ignition:
             </label>
             <select id="materialSelect" class="w-full bg-[#070b14] border border-sky-500/40 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer">
-              <option value="nomex">Rivestimento Parete Nomex® HT90-40 (Ignifugo)</option>
-              <option value="sibal" selected>Tessuto Cellulosico / Cotone Equipaggio (SIBAL)</option>
-              <option value="kapton_ml">Isolamento Multistrato Kapton® / Mylar Alluminizzato</option>
-              <option value="etfe_wire">Cablaggio Avionico ETFE / Tefzel® (Rack ECLSS)</option>
-              <option value="pmma_win">Finestra / Pannello Polimetilmetacrilato (PMMA)</option>
-              <option value="poly_foam">Schiuma Acustica / Imballaggio Polietilene (PE)</option>
+              <option value="nomex">Nomex® HT90-40 Wall Lining (Flame Retardant)</option>
+              <option value="sibal" selected>Cellulosic Fabric / Crew Cotton (SIBAL)</option>
+              <option value="kapton_ml">Kapton® / Aluminized Mylar Multilayer Insulation</option>
+              <option value="etfe_wire">ETFE / Tefzel® Avionics Wiring (ECLSS Rack)</option>
+              <option value="pmma_win">Polymethyl Methacrylate (PMMA) Window / Panel</option>
+              <option value="poly_foam">Polyethylene (PE) Acoustic / Packing Foam</option>
             </select>
           </div>
 
           <!-- Scheda Tecnica Termochimica del Materiale Selezionato -->
           <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-3 space-y-2 text-xs">
             <div class="flex justify-between items-center border-b border-[#1e293b] pb-1.5">
-              <span class="text-slate-400">Classe NASA-STD-6001B:</span>
-              <span id="matNasaRating" class="font-mono font-bold text-amber-400">B-Rating (Combustibile)</span>
+              <span class="text-slate-400">NASA-STD-6001B class:</span>
+              <span id="matNasaRating" class="font-mono font-bold text-amber-400">B-Rating (Combustible)</span>
             </div>
             <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
               <div>
-                <span class="text-slate-500 block text-[10px]">Temp. Pirolisi $T_p$:</span>
+                <span class="text-slate-500 block text-[10px]">Pyrolysis Temp. $T_p$:</span>
                 <span id="matTp" class="text-slate-200 font-semibold">620 K</span>
               </div>
               <div>
@@ -243,16 +243,16 @@
                 <span id="matMoi" class="text-cyan-400 font-semibold">18.2% → 16.8% O₂</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[10px]">Densità Superficiale:</span>
+                <span class="text-slate-500 block text-[10px]">Areal Density:</span>
                 <span id="matAreaDens" class="text-slate-200 font-semibold">18.2 mg/cm²</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[10px]">Calore Combustione $\Delta H_c$:</span>
+                <span class="text-slate-500 block text-[10px]">Heat of Combustion $\Delta H_c$:</span>
                 <span id="matHc" class="text-orange-400 font-semibold">16.7 kJ/g</span>
               </div>
             </div>
             <p id="matNotes" class="text-[11px] text-slate-400 leading-snug pt-1 border-t border-[#1e293b]">
-              Tessuto standard di riferimento NASA (75% cellulosa, 25% fibra di vetro inerte). Sensibile al trasporto convettivo e all'arricchimento di O₂.
+              NASA standard reference fabric (75% cellulose, 25% inert glass fiber). Sensitive to convective transport and O₂ enrichment.
             </p>
           </div>
         </div>
@@ -261,14 +261,14 @@
         <div class="card-panel rounded-2xl p-4 space-y-3.5">
           <h2 class="text-sm font-bold text-white flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-            2. Atmosfera Interna Cabina MPH
+            2. MPH Cabin Internal Atmosphere
           </h2>
 
           <!-- Pressione Cabina p -->
           <div class="space-y-1">
             <div class="flex justify-between items-center">
               <label for="pressureMphSlider" class="text-xs font-semibold text-slate-200">
-                Pressione Cabina <span class="font-mono text-amber-400">p</span>
+                Cabin Pressure <span class="font-mono text-amber-400">p</span>
               </label>
               <span id="pressureMphVal" class="font-mono text-xs font-bold text-amber-400">56.5 kPa (0.56 atm)</span>
             </div>
@@ -285,14 +285,14 @@
           <div class="space-y-1">
             <div class="flex justify-between items-center">
               <label for="oxygenMphSlider" class="text-xs font-semibold text-slate-200">
-                Percentuale Ossigeno <span class="font-mono text-emerald-400">X_O₂</span>
+                Oxygen Percentage <span class="font-mono text-emerald-400">X_O₂</span>
               </label>
               <span id="oxygenMphVal" class="font-mono text-xs font-bold text-emerald-400">34.0% O₂ (ppO₂ = 19.2 kPa)</span>
             </div>
             <input id="oxygenMphSlider" type="range" min="14" max="42" step="0.5" value="34.0" class="mph-slider mph-slider-emerald" />
             <div class="flex justify-between text-[10px] font-mono text-slate-500">
-              <span>14% (Ipoxia)</span>
-              <span>21% (Aria)</span>
+              <span>14% (Hypoxia)</span>
+              <span>21% (Air)</span>
               <span>34% (Artemis)</span>
               <span>42%</span>
             </div>
@@ -302,14 +302,14 @@
           <div class="space-y-1">
             <div class="flex justify-between items-center">
               <label for="ventMphSlider" class="text-xs font-semibold text-slate-200">
-                Ventilazione ECLSS <span class="font-mono text-sky-400">U_vent</span>
+                ECLSS Ventilation <span class="font-mono text-sky-400">U_vent</span>
               </label>
-              <span id="ventMphVal" class="font-mono text-xs font-bold text-sky-400">12 cm/s (Ricircolo Cabina)</span>
+              <span id="ventMphVal" class="font-mono text-xs font-bold text-sky-400">12 cm/s (Cabin Recirculation)</span>
             </div>
             <input id="ventMphSlider" type="range" min="0" max="35" step="1" value="12" class="mph-slider" />
             <div class="flex justify-between text-[10px] font-mono text-slate-500">
               <span>0 (ECLSS Off)</span>
-              <span>12 (Nominale)</span>
+              <span>12 (Nominal)</span>
               <span>25</span>
               <span>35 cm/s</span>
             </div>
@@ -317,12 +317,12 @@
 
           <!-- Gravità Locale (Fissa su Luna 0.165 g_e con opzione confronto Terra/Marte) -->
           <div class="pt-2 border-t border-[#1e293b] flex items-center justify-between gap-2">
-            <label for="gravModeSelect" class="text-xs font-semibold text-slate-300">Campo Gravitazionale:</label>
+            <label for="gravModeSelect" class="text-xs font-semibold text-slate-300">Gravitational Field:</label>
             <select id="gravModeSelect" class="bg-[#070b14] border border-[#1e293b] rounded-lg px-2.5 py-1 text-xs font-mono text-sky-300 focus:outline-none cursor-pointer">
-              <option value="0.165" selected>Superficie Lunare (0.165 g_e • 1.62 m/s²)</option>
-              <option value="0.378">Superficie Marziana (0.378 g_e • 3.71 m/s²)</option>
-              <option value="1.000">Test Terrestre 1g (1.000 g_e • 9.81 m/s²)</option>
-              <option value="0.0001">Orbita Lunare Gateway (0.0001 g_e • µg)</option>
+              <option value="0.165" selected>Lunar Surface (0.165 g_e • 1.62 m/s²)</option>
+              <option value="0.378">Martian Surface (0.378 g_e • 3.71 m/s²)</option>
+              <option value="1.000">Earth 1g Test (1.000 g_e • 9.81 m/s²)</option>
+              <option value="0.0001">Lunar Gateway Orbit (0.0001 g_e • µg)</option>
             </select>
           </div>
         </div>
@@ -331,21 +331,21 @@
         <div class="card-panel rounded-2xl p-4 space-y-2.5">
           <h2 class="text-sm font-bold text-white flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-rose-400"></span>
-            3. Sorgente di Innesco nel Modulo MPH
+            3. Ignition Source in the MPH Module
           </h2>
           <div class="grid grid-cols-3 gap-1.5">
             <button type="button" data-zone="table" class="zone-btn px-2 py-2 rounded-xl bg-sky-500/20 border border-sky-400 text-[11px] font-semibold text-white text-center cursor-pointer">
-              Tavolino Centrale<br/><span class="text-[9px] text-sky-300 font-mono">Piano di Lavoro</span>
+              Central Table<br/><span class="text-[9px] text-sky-300 font-mono">Work Surface</span>
             </button>
             <button type="button" data-zone="rack" class="zone-btn px-2 py-2 rounded-xl bg-[#070b14] border border-[#1e293b] text-[11px] font-medium text-slate-300 text-center cursor-pointer">
-              Rack Avionica<br/><span class="text-[9px] text-slate-400 font-mono">Mensola ECLSS</span>
+              Avionics Rack<br/><span class="text-[9px] text-slate-400 font-mono">ECLSS Shelf</span>
             </button>
             <button type="button" data-zone="crew" class="zone-btn px-2 py-2 rounded-xl bg-[#070b14] border border-[#1e293b] text-[11px] font-medium text-slate-300 text-center cursor-pointer">
-              Cuccetta / Tessile<br/><span class="text-[9px] text-slate-400 font-mono">Zona Abitativa</span>
+              Bunk / Textile<br/><span class="text-[9px] text-slate-400 font-mono">Living Area</span>
             </button>
           </div>
           <p class="text-[11px] text-slate-400">
-            Clicca all'interno del modulo per spostare l'innesco lungo le superfici solide (tavolino, mensola rack o cuccetta).
+            Click inside the module to move the ignition point along the solid surfaces (table, rack shelf or bunk).
           </p>
         </div>
       </aside>
@@ -356,10 +356,10 @@
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <h2 class="text-sm sm:text-base font-bold text-white">
-                Sezione Longitudinale Modulo Lunare Artemis MPH (Lunghezza 6.2 m × Diametro 3.4 m)
+                Artemis MPH Lunar Module Longitudinal Section (Length 6.2 m × Diameter 3.4 m)
               </h2>
               <p class="text-[11px] text-slate-400">
-                Simulazione fisica accoppiata: pennacchio di galleggiamento lunare ($U_B \propto g^{0.5}$), standoff $\delta_f \propto p^{-0.5}g^{-0.25}$, strato di fumo al soffitto e concentrazione $\text{CO}/\text{CO}_2$.
+                Coupled physics simulation: lunar buoyant plume ($U_B \propto g^{0.5}$), standoff $\delta_f \propto p^{-0.5}g^{-0.25}$, ceiling smoke layer and $\text{CO}/\text{CO}_2$ concentration.
               </p>
             </div>
             <div class="flex items-center gap-3 font-mono text-xs">
@@ -380,20 +380,20 @@
           <!-- Barra Sensori di Sicurezza Cabina MPH (Rilevamento Fumo, CO, Pressione, Temp) -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3 font-mono text-xs">
             <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
-              <div class="text-[10px] text-slate-400">Temp. Soffitto MPH</div>
+              <div class="text-[10px] text-slate-400">MPH Ceiling Temp.</div>
               <div id="sensorTempCeil" class="text-sm font-bold text-amber-400">295 K (22°C)</div>
             </div>
             <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
-              <div class="text-[10px] text-slate-400">Monossido Carbonio (CO)</div>
-              <div id="sensorCoPpm" class="text-sm font-bold text-emerald-400">0 ppm (Sicuro)</div>
+              <div class="text-[10px] text-slate-400">Carbon Monoxide (CO)</div>
+              <div id="sensorCoPpm" class="text-sm font-bold text-emerald-400">0 ppm (Safe)</div>
             </div>
             <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
-              <div class="text-[10px] text-slate-400">Spessore Strato Fumo</div>
+              <div class="text-[10px] text-slate-400">Smoke Layer Thickness</div>
               <div id="sensorSmokeLayer" class="text-sm font-bold text-sky-400">0.00 m</div>
             </div>
             <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
-              <div class="text-[10px] text-slate-400">Allarme Rilevatori NASA</div>
-              <div id="sensorAlarmState" class="text-sm font-bold text-emerald-400">NOMINALE</div>
+              <div class="text-[10px] text-slate-400">NASA Detector Alarm</div>
+              <div id="sensorAlarmState" class="text-sm font-bold text-emerald-400">NOMINAL</div>
             </div>
           </div>
         </div>
@@ -407,9 +407,9 @@
       <!-- Grafico A: Curva di Propagazione Vf vs O2% a Pressione Cabina MPH -->
       <div class="card-panel rounded-2xl p-4 flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-sky-400 uppercase">Analisi 1 • Effetto Ossigeno &amp; Gravità Lunare</span>
-          <h3 class="text-sm font-bold text-white">Velocità di Propagazione $V_f$ [cm/s] vs Concentrazione $\text{O}_2$ (%)</h3>
-          <p class="text-[11px] text-slate-400">Confronta il materiale selezionato a $0.165\,g_e$ (Luna, $p$ attuale) rispetto a $1.0\,g_e$ (Terra) e al limite di estinzione MOI.</p>
+          <span class="text-[10px] font-mono text-sky-400 uppercase">Analysis 1 • Oxygen &amp; Lunar Gravity Effect</span>
+          <h3 class="text-sm font-bold text-white">Flame Spread Rate $V_f$ [cm/s] vs $\text{O}_2$ Concentration (%)</h3>
+          <p class="text-[11px] text-slate-400">Compares the selected material at $0.165\,g_e$ (Moon, current $p$) with $1.0\,g_e$ (Earth) and the MOI extinction limit.</p>
         </div>
         <div id="chartMphO2Wrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
           <canvas id="chartMphO2" class="block w-full h-full"></canvas>
@@ -420,9 +420,9 @@
       <!-- Grafico B: Curva di Propagazione Vf vs Pressione Cabina p [kPa] -->
       <div class="card-panel rounded-2xl p-4 flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-amber-400 uppercase">Analisi 2 • Legge di Scala $p^{1.8}g$ in Cabina</span>
-          <h3 class="text-sm font-bold text-white">Propagazione $V_f$ [cm/s] &amp; Standoff $\delta_f$ [mm] vs Pressione $p$ [kPa]</h3>
-          <p class="text-[11px] text-slate-400">Ridurre $p$ da $101.3$ a $56.5\text{ kPa}$ riduce la convezione ($p^{1.8}g$), ma l'aumento di $\text{O}_2$ ($34\%$) accelera la cinetica.</p>
+          <span class="text-[10px] font-mono text-amber-400 uppercase">Analysis 2 • Cabin $p^{1.8}g$ Scaling Law</span>
+          <h3 class="text-sm font-bold text-white">Spread $V_f$ [cm/s] &amp; Standoff $\delta_f$ [mm] vs Pressure $p$ [kPa]</h3>
+          <p class="text-[11px] text-slate-400">Lowering $p$ from $101.3$ to $56.5\text{ kPa}$ reduces convection ($p^{1.8}g$), but the higher $\text{O}_2$ ($34\%$) speeds up the kinetics.</p>
         </div>
         <div id="chartMphPressWrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
           <canvas id="chartMphPress" class="block w-full h-full"></canvas>
@@ -433,9 +433,9 @@
       <!-- Grafico C: Evoluzione Temporale HRR [kW] & Tossicità CO nel Volume MPH -->
       <div class="card-panel rounded-2xl p-4 flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-rose-400 uppercase">Analisi 3 • Dinamica nel Volume Chiuso MPH (~48 m³)</span>
-          <h3 class="text-sm font-bold text-white">Heat Release Rate (HRR [kW]) &amp; Accumulo CO [ppm] nel Tempo</h3>
-          <p class="text-[11px] text-slate-400">In gravità lunare il pennacchio è più lento e spesso ($\delta_T \propto g^{-0.25}$), rallentando il tempo di arrivo ai sensori al soffitto.</p>
+          <span class="text-[10px] font-mono text-rose-400 uppercase">Analysis 3 • Dynamics in the Closed MPH Volume (~48 m³)</span>
+          <h3 class="text-sm font-bold text-white">Heat Release Rate (HRR [kW]) &amp; CO Build-up [ppm] over Time</h3>
+          <p class="text-[11px] text-slate-400">At lunar gravity the plume is slower and thicker ($\delta_T \propto g^{-0.25}$), delaying its arrival at the ceiling sensors.</p>
         </div>
         <div id="chartMphTimeWrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
           <canvas id="chartMphTime" class="block w-full h-full"></canvas>
@@ -449,21 +449,21 @@
     <!-- ===================================================================== -->
     <section class="card-panel rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-5 text-xs text-slate-300 leading-relaxed">
       <div class="space-y-1.5">
-        <h4 class="font-bold text-sky-400 font-mono uppercase">1. Fluidodinamica Lunare (0.165 g_e)</h4>
+        <h4 class="font-bold text-sky-400 font-mono uppercase">1. Lunar Fluid Dynamics (0.165 g_e)</h4>
         <p>
-          Sulla superficie lunare ($g = 1.62\text{ m/s}^2$), la velocità di galleggiamento dei gas caldi si riduce a $U_B \propto g^{0.5} \approx 0.406\,U_{B,\text{Terra}}$ (~$44\text{ cm/s}$ invece di $108\text{ cm/s}$). Di conseguenza, lo spessore dello strato limite termico e la distanza di standoff della fiamma $\delta_f \propto p^{-0.5}g^{-0.25}$ aumentano del <strong>+57% a 101 kPa</strong> e fino al <strong>+110% a 56.5 kPa</strong>.
+          On the lunar surface ($g = 1.62\text{ m/s}^2$), the buoyant velocity of hot gases drops to $U_B \propto g^{0.5} \approx 0.406\,U_{B,\text{Earth}}$ (~$44\text{ cm/s}$ instead of $108\text{ cm/s}$). As a result, the thermal boundary layer thickness and the flame standoff distance $\delta_f \propto p^{-0.5}g^{-0.25}$ increase by <strong>+57% at 101 kPa</strong> and up to <strong>+110% at 56.5 kPa</strong>.
         </p>
       </div>
       <div class="space-y-1.5">
-        <h4 class="font-bold text-amber-400 font-mono uppercase">2. Paradosso Atmosfera Artemis (56.5 kPa • 34% O₂)</h4>
+        <h4 class="font-bold text-amber-400 font-mono uppercase">2. The Artemis Atmosphere Paradox (56.5 kPa • 34% O₂)</h4>
         <p>
-          Per prevenire la malattia da decompressione prima delle attività extraveicolari (EVA), i moduli lunari Artemis operano a pressione ridotta ($56.5\text{ kPa}$) ma arricchita al <strong>34% di $\text{O}_2$</strong>. Mentre la bassa pressione riduce il numero di Grashof ($Gr \propto p^2g$), l'elevata frazione molare di $\text{O}_2$ abbatte il tempo chimico ($Da$ alto), rendendo materiali come il <strong>Nomex</strong> o il <strong>Kapton</strong> significativamente più infiammabili rispetto all'aria terrestre.
+          To prevent decompression sickness before extravehicular activities (EVA), Artemis lunar modules operate at reduced pressure ($56.5\text{ kPa}$) but enriched to <strong>34% $\text{O}_2$</strong>. While the low pressure reduces the Grashof number ($Gr \propto p^2g$), the high $\text{O}_2$ mole fraction cuts the chemical time (high $Da$), making materials such as <strong>Nomex</strong> or <strong>Kapton</strong> significantly more flammable than in Earth air.
         </p>
       </div>
       <div class="space-y-1.5">
-        <h4 class="font-bold text-rose-400 font-mono uppercase">3. Confinamento &amp; Rilevamento nel Modulo MPH</h4>
+        <h4 class="font-bold text-rose-400 font-mono uppercase">3. Confinement &amp; Detection in the MPH Module</h4>
         <p>
-          Nel volume cilindrico dell'MPH ($\sim 48\text{ m}^3$), la minor spinta di galleggiamento fa sì che il pennacchio di fumo risalga più lentamente e si espanda lateralmente prima di raggiungere il soffitto, ritardando l'attivazione dei rilevatori ottici standard ma aumentando il rischio di <strong>interazione radiativa con le pareti</strong> (effetto NASA PSI-25).
+          In the cylindrical MPH volume ($\sim 48\text{ m}^3$), the weaker buoyancy makes the smoke plume rise more slowly and spread sideways before reaching the ceiling, delaying the activation of standard optical detectors but increasing the risk of <strong>radiative interaction with the walls</strong> (NASA PSI-25 effect).
         </p>
       </div>
     </section>
@@ -480,8 +480,8 @@
       // Database Materiali Interni Modulo Lunare Artemis MPH (dati NASA-STD-6001B & PSI)
       const MPH_MATERIALS = {
         nomex: {
-          name: 'Rivestimento Nomex® HT90-40',
-          rating: 'A-Rating (Autoestinguente in aria)',
+          name: 'Nomex® HT90-40 Lining',
+          rating: 'A-Rating (Self-extinguishing in air)',
           ratingColor: 'text-emerald-400',
           tp: 760,           // K
           moi1g: 28.5,       // % O2 a 1g, 101 kPa
@@ -490,11 +490,11 @@
           vfRef: 0.45,       // cm/s base ref
           coYield: 0.045,    // g CO / g fuel
           sootYield: 0.015,
-          notes: 'Tessuto aramidico ignifugo usato per rivestimenti interni e sacche stowage. In gravità lunare (0.165 g_e) con 34% O₂ può sostenere una propagazione lenta.'
+          notes: 'Flame-retardant aramid fabric used for interior linings and stowage bags. At lunar gravity (0.165 g_e) with 34% O₂ it can sustain slow flame spread.'
         },
         sibal: {
-          name: 'Tessuto Cellulosico / Cotone (SIBAL)',
-          rating: 'B-Rating (Combustibile Standard)',
+          name: 'Cellulosic Fabric / Cotton (SIBAL)',
+          rating: 'B-Rating (Standard Combustible)',
           ratingColor: 'text-amber-400',
           tp: 620,
           moi1g: 18.2,
@@ -503,11 +503,11 @@
           vfRef: 3.00,
           coYield: 0.032,
           sootYield: 0.025,
-          notes: 'Tessuto di riferimento NASA (75% cellulosa, 25% fibra di vetro inerte, Thinnakornsutibutr et al. 2025). Rappresenta indumenti dell’equipaggio e salviette.'
+          notes: 'NASA reference fabric (75% cellulose, 25% inert glass fiber, Thinnakornsutibutr et al. 2025). Represents crew clothing and wipes.'
         },
         kapton_ml: {
-          name: 'Isolamento Kapton® / Mylar Alluminizzato',
-          rating: 'A/B-Rating (Condizionale ad O₂)',
+          name: 'Kapton® / Aluminized Mylar Insulation',
+          rating: 'A/B-Rating (O₂ Dependent)',
           ratingColor: 'text-amber-400',
           tp: 790,
           moi1g: 25.0,
@@ -516,11 +516,11 @@
           vfRef: 1.15,
           coYield: 0.068,
           sootYield: 0.040,
-          notes: 'Pellicola poliimmidica usata per isolamento termico e cablaggi. Estremamente sottile: la bassa inerzia termica (ρ_s c_s τ) favorisce rapida accensione ad alto O₂.'
+          notes: 'Polyimide film used for thermal insulation and wiring. Extremely thin: its low thermal inertia (ρ_s c_s τ) favors rapid ignition at high O₂.'
         },
         etfe_wire: {
-          name: 'Cablaggio Avionico ETFE / Tefzel®',
-          rating: 'B-Rating (Sovraccarico Elettrico)',
+          name: 'ETFE / Tefzel® Avionics Wiring',
+          rating: 'B-Rating (Electrical Overload)',
           ratingColor: 'text-orange-400',
           tp: 695,
           moi1g: 23.5,
@@ -529,11 +529,11 @@
           vfRef: 0.85,
           coYield: 0.085,
           sootYield: 0.055,
-          notes: 'Isolante fluoropolimerico per cavi nei rack ECLSS e avionica MPH. Produce fumi tossici (CO e fluoruri) se surriscaldato in atmosfera arricchita.'
+          notes: 'Fluoropolymer cable insulation in the ECLSS racks and MPH avionics. Produces toxic fumes (CO and fluorides) when overheated in an enriched atmosphere.'
         },
         pmma_win: {
-          name: 'Pannello / Finestra PMMA (Acrilico)',
-          rating: 'C-Rating (Combustibile Denso)',
+          name: 'PMMA Panel / Window (Acrylic)',
+          rating: 'C-Rating (Dense Combustible)',
           ratingColor: 'text-rose-400',
           tp: 640,
           moi1g: 17.4,
@@ -542,11 +542,11 @@
           vfRef: 1.65,
           coYield: 0.022,
           sootYield: 0.035,
-          notes: 'Polimetilmetacrilato spessore ~1 mm. Elevato calore di combustione (24.9 kJ/g) e gocciolamento fuso ridotto in gravità lunare (0.165 g_e).'
+          notes: 'Polymethyl methacrylate, ~1 mm thick. High heat of combustion (24.9 kJ/g) and reduced molten dripping at lunar gravity (0.165 g_e).'
         },
         poly_foam: {
-          name: 'Schiuma Imballaggio Polietilene (PE)',
-          rating: 'C-Rating (Alta Velocità Rilascio)',
+          name: 'Polyethylene (PE) Packing Foam',
+          rating: 'C-Rating (High Release Rate)',
           ratingColor: 'text-rose-400',
           tp: 610,
           moi1g: 17.1,
@@ -555,7 +555,7 @@
           vfRef: 4.10,
           coYield: 0.038,
           sootYield: 0.060,
-          notes: 'Materiale da imballaggio logistico cargo. Altissimo potere calorifico (43.2 kJ/g) e rapidissima propagazione del fronte di pirolisi in atmosfera 34% O₂.'
+          notes: 'Cargo logistics packing material. Very high heating value (43.2 kJ/g) and very fast pyrolysis front spread in a 34% O₂ atmosphere.'
         }
       };
 
@@ -645,16 +645,16 @@
         const tempCeilingK = 295 + Math.min(480, hrrKw * 4.8 * (1 - state.suppressionProgress * 0.7));
 
         // Classificazione Rischio
-        let riskLabel = 'AUTOESTINGUENTE (O₂ < MOI)';
+        let riskLabel = 'SELF-EXTINGUISHING (O₂ < MOI)';
         let riskClass = 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300';
         if (o2Margin > 0 && vfCmS < 1.0) {
-          riskLabel = 'PROPAGAZIONE LENTA • MONITORAGGIO';
+          riskLabel = 'SLOW SPREAD • MONITORING';
           riskClass = 'bg-sky-500/15 border-sky-500/40 text-sky-300';
         } else if (vfCmS >= 1.0 && vfCmS < 2.8) {
-          riskLabel = 'RISCHIO MODERATO • PROPAGAZIONE ATTIVA';
+          riskLabel = 'MODERATE RISK • ACTIVE SPREAD';
           riskClass = 'bg-amber-500/15 border-amber-500/40 text-amber-300';
         } else if (vfCmS >= 2.8) {
-          riskLabel = 'ALLARME CRITICO • RAPIDA PROPAGAZIONE O₂';
+          riskLabel = 'CRITICAL ALARM • RAPID O₂ SPREAD';
           riskClass = 'bg-rose-500/20 border-rose-500/50 text-rose-300';
         }
 
@@ -947,7 +947,7 @@
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 9px "JetBrains Mono", monospace';
-        ctx.fillText('TAVOLINO ESPERIMENTI / WORKBENCH', tableX + 8, tableTopY + 21);
+        ctx.fillText('EXPERIMENT TABLE / WORKBENCH', tableX + 8, tableTopY + 21);
 
         // 3C. CUCCETTA EQUIPAGGIO (Destra)
         const bunkX = intLeft + intW * 0.73;
@@ -967,7 +967,7 @@
         ctx.roundRect(bunkX + 6, bunkSurfaceY - 6, bunkW - 12, 6, 2);
         ctx.fill();
         ctx.fillStyle = '#94a3b8';
-        ctx.fillText('CUCCETTA / AIRLOCK', bunkX + 8, bunkY + 14);
+        ctx.fillText('BUNK / AIRLOCK', bunkX + 8, bunkY + 14);
 
         // Linee flusso ventilazione ECLSS (U_vent)
         if (phys.uVent > 0) {
@@ -1189,7 +1189,7 @@
         // Footer HUD
         ctx.font = '600 10.5px "JetBrains Mono", monospace';
         ctx.fillStyle = '#94a3b8';
-        ctx.fillText(`SUPERFICIE LUNARE • g = ${(phys.gRel * 9.81).toFixed(2)} m/s² (${phys.gRel.toFixed(3)} g_e)`, modX, H - 12);
+        ctx.fillText(`LUNAR SURFACE • g = ${(phys.gRel * 9.81).toFixed(2)} m/s² (${phys.gRel.toFixed(3)} g_e)`, modX, H - 12);
         ctx.fillStyle = '#38bdf8';
         ctx.fillText(`U_buoy = ${phys.uBuoyCmS.toFixed(1)} cm/s | U_vent = ${phys.uVent} cm/s`, W - modX - 245, H - 12);
       }
@@ -1356,9 +1356,9 @@
         const maxVf1 = Math.max(4.5, Math.max(...ptsEarth.map(p => p.y)) * 1.1, Math.max(...ptsMoon.map(p => p.y)) * 1.15);
 
         drawLineChart('chartMphO2', [
-          { label: `Modulo MPH (${phys.gRel.toFixed(3)} g_e)`, color: '#38bdf8', width: 2.8, pts: ptsMoon },
-          { label: 'Riferimento Terra (1.0 g_e)', color: '#f59e0b', width: 2.0, dash: [5, 4], pts: ptsEarth }
-        ], { min: 14, max: 42, dec: 0, unit: '% O₂', title: 'Concentrazione Ossigeno Cabina O₂ [%]' }, { min: 0, max: Math.ceil(maxVf1), dec: 1 }, phys.o2);
+          { label: `MPH Module (${phys.gRel.toFixed(3)} g_e)`, color: '#38bdf8', width: 2.8, pts: ptsMoon },
+          { label: 'Earth Reference (1.0 g_e)', color: '#f59e0b', width: 2.0, dash: [5, 4], pts: ptsEarth }
+        ], { min: 14, max: 42, dec: 0, unit: '% O₂', title: 'Cabin Oxygen Concentration O₂ [%]' }, { min: 0, max: Math.ceil(maxVf1), dec: 1 }, phys.o2);
 
         const pGrid = [];
         for (let pr = 30; pr <= 105; pr += 2.5) pGrid.push(pr);
@@ -1367,9 +1367,9 @@
         const maxY2 = Math.max(4.5, Math.max(...ptsPressVf.map(p => p.y)) * 1.15, Math.max(...ptsPressDf.map(p => p.y)) * 1.15);
 
         drawLineChart('chartMphPress', [
-          { label: 'Propagazione V_f [cm/s]', color: '#10b981', width: 2.8, pts: ptsPressVf },
+          { label: 'Spread V_f [cm/s]', color: '#10b981', width: 2.8, pts: ptsPressVf },
           { label: 'Standoff δ_f / 4 [mm]', color: '#a855f7', width: 2.2, dash: [4, 3], pts: ptsPressDf }
-        ], { min: 30, max: 105, dec: 0, unit: ' kPa', title: 'Pressione Cabina MPH p [kPa]' }, { min: 0, max: Math.ceil(maxY2), dec: 1 }, phys.p);
+        ], { min: 30, max: 105, dec: 0, unit: ' kPa', title: 'MPH Cabin Pressure p [kPa]' }, { min: 0, max: Math.ceil(maxY2), dec: 1 }, phys.p);
 
         const tGrid = [];
         for (let t = 0; t <= 120; t += 3) tGrid.push(t);
@@ -1378,9 +1378,9 @@
         const maxY3 = Math.max(15, Math.max(...ptsHrr.map(p => p.y)) * 1.15, Math.max(...ptsCo.map(p => p.y)) * 1.15);
 
         drawLineChart('chartMphTime', [
-          { label: 'HRR Incendio [kW]', color: '#f43f5e', width: 2.8, pts: ptsHrr },
-          { label: 'CO Cabina [ppm / 20]', color: '#22d3ee', width: 2.2, dash: [5, 3], pts: ptsCo }
-        ], { min: 0, max: 120, dec: 0, unit: ' s', title: 'Tempo dall\'Innesco t [s]' }, { min: 0, max: Math.ceil(maxY3), dec: 0 }, Math.min(120, state.simTime));
+          { label: 'Fire HRR [kW]', color: '#f43f5e', width: 2.8, pts: ptsHrr },
+          { label: 'Cabin CO [ppm / 20]', color: '#22d3ee', width: 2.2, dash: [5, 3], pts: ptsCo }
+        ], { min: 0, max: 120, dec: 0, unit: ' s', title: 'Time Since Ignition t [s]' }, { min: 0, max: Math.ceil(maxY3), dec: 0 }, Math.min(120, state.simTime));
       }
 
       function bindInteractiveChartHover(canvasId, tipId) {
@@ -1449,15 +1449,15 @@
         if (isClosed) {
           section.classList.remove('xl:col-span-8');
           section.classList.add('xl:col-span-12');
-          btnText.textContent = 'Apri Pannello Sinistro';
-          btnIcon.textContent = '▶';
-          showToast('Pannello controlli sinistro chiuso (vista simulatore espansa)');
+          btnText.textContent = 'Open Left Panel';
+          btnIcon.textContent = '›';
+          showToast('Left control panel closed (expanded simulator view)');
         } else {
           section.classList.remove('xl:col-span-12');
           section.classList.add('xl:col-span-8');
-          btnText.textContent = 'Chiudi Pannello Sinistro';
-          btnIcon.textContent = '◀';
-          showToast('Pannello controlli sinistro riaperto');
+          btnText.textContent = 'Close Left Panel';
+          btnIcon.textContent = '‹';
+          showToast('Left control panel reopened');
         }
 
         setTimeout(() => {
@@ -1493,7 +1493,7 @@
         // Readout controlli atmosfera
         document.getElementById('pressureMphVal').textContent = `${phys.p.toFixed(1)} kPa (${(phys.p / 101.3).toFixed(2)} atm)`;
         document.getElementById('oxygenMphVal').textContent = `${phys.o2.toFixed(1)}% O₂ (ppO₂ = ${phys.ppO2.toFixed(1)} kPa)`;
-        document.getElementById('ventMphVal').textContent = phys.uVent === 0 ? '0 cm/s (ECLSS Spento)' : `${phys.uVent} cm/s (Ricircolo Cabina)`;
+        document.getElementById('ventMphVal').textContent = phys.uVent === 0 ? '0 cm/s (ECLSS Off)' : `${phys.uVent} cm/s (Cabin Recirculation)`;
 
         // Sensori cabina MPH
         document.getElementById('simClockVal').textContent = `${state.simTime.toFixed(1)} s`;
@@ -1504,16 +1504,16 @@
 
         const alarmEl = document.getElementById('sensorAlarmState');
         if (state.suppressed) {
-          alarmEl.textContent = 'SOPPRESSIONE ATTIVA';
+          alarmEl.textContent = 'SUPPRESSION ACTIVE';
           alarmEl.className = 'text-sm font-bold text-sky-400';
         } else if (phys.smokeLayerM > 0.22 || phys.coPpm > 50 || phys.tempCeilingK > 335) {
-          alarmEl.textContent = 'ALLARME INCENDIO MPH!';
+          alarmEl.textContent = 'MPH FIRE ALARM!';
           alarmEl.className = 'text-sm font-bold text-rose-400 animate-pulse';
         } else if (phys.o2Margin <= 0) {
-          alarmEl.textContent = 'AUTOESTINTO (< MOI)';
+          alarmEl.textContent = 'SELF-EXTINGUISHED (< MOI)';
           alarmEl.className = 'text-sm font-bold text-emerald-400';
         } else {
-          alarmEl.textContent = 'NOMINALE (PRE-ALLARME)';
+          alarmEl.textContent = 'NOMINAL (PRE-ALARM)';
           alarmEl.className = 'text-sm font-bold text-amber-400';
         }
 
@@ -1572,7 +1572,7 @@
         document.getElementById('materialSelect').addEventListener('change', e => {
           state.matKey = e.target.value;
           updateUiAndPhysics();
-          showToast(`Materiale selezionato: ${MPH_MATERIALS[state.matKey].name}`);
+          showToast(`Selected material: ${MPH_MATERIALS[state.matKey].name}`);
         });
 
         document.getElementById('pressureMphSlider').addEventListener('input', e => {
@@ -1593,7 +1593,7 @@
         document.getElementById('gravModeSelect').addEventListener('change', e => {
           state.gRel = Number(e.target.value);
           updateUiAndPhysics();
-          showToast(`Campo gravitazionale impostato a ${state.gRel} g_e`);
+          showToast(`Gravitational field set to ${state.gRel} g_e`);
         });
 
         document.querySelectorAll('.env-preset-btn').forEach(btn => {
@@ -1614,7 +1614,7 @@
             btn.classList.add('bg-sky-500/20', 'border-sky-400/60', 'font-semibold', 'text-sky-200');
 
             updateUiAndPhysics();
-            showToast(`Preset applicato: ${btn.textContent.trim()}`);
+            showToast(`Preset applied: ${btn.textContent.trim()}`);
           });
         });
 
@@ -1671,12 +1671,12 @@
           state.smokeParticles = [];
           state.emberParticles = [];
           updateUiAndPhysics();
-          showToast('Nuovo punto di innesco ancorato alla superficie nel modulo MPH');
+          showToast('New ignition point anchored to a surface in the MPH module');
         });
 
         document.getElementById('btnPlayPause').addEventListener('click', function () {
           state.running = !state.running;
-          this.textContent = state.running ? '⏸ Pausa Simulazione' : '▶ Riprendi Simulazione';
+          this.textContent = state.running ? 'Pause Simulation' : 'Resume Simulation';
         });
 
         document.getElementById('btnResetSim').addEventListener('click', () => {
@@ -1686,13 +1686,13 @@
           state.smokeParticles = [];
           state.emberParticles = [];
           updateUiAndPhysics();
-          showToast('Simulazione incendio MPH riavviata a t = 0.0 s');
+          showToast('MPH fire simulation restarted at t = 0.0 s');
         });
 
         document.getElementById('btnSuppress').addEventListener('click', () => {
           state.suppressed = true;
           updateUiAndPhysics();
-          showToast('Sistema di soppressione antincendio N₂ / Fine Water Mist attivato');
+          showToast('N₂ / Fine Water Mist fire suppression system activated');
         });
 
         bindInteractiveChartHover('chartMphO2', 'tipMphO2');

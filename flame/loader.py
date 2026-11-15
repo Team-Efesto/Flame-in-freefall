@@ -4,7 +4,7 @@ Modulo per l'animazione di forgiatura dati della piattaforma EFESTO.
 Zero dipendenze esterne, 100% offline e compatibile con Streamlit.
 """
 
-def get_efesto_loader_html(message: str = "Forgiatura dei dati in corso...", height: int = 190) -> str:
+def get_efesto_loader_html(message: str = "Forging the data...", height: int = 190) -> str:
     """Restituisce il frammento HTML/CSS con l'animazione del martello che batte sull'incudine."""
     return f"""
 <div class="efesto-forge-container" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1.2rem; margin:1rem 0; width:100%;">
@@ -189,7 +189,7 @@ def get_efesto_loader_html(message: str = "Forgiatura dei dati in corso...", hei
   </svg>
 
   <div class="efesto-loader-label">
-    <span>🔨 {message}</span>
+    <span>{message}</span>
   </div>
 </div>
 """

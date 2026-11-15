@@ -129,27 +129,27 @@
     <!-- Callout 1: Droplet Core -->
     <path d="M 400 238 L 400 180 L 330 180" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" />
     <circle cx="400" cy="238" r="3" fill="#38bdf8" />
-    <text x="210" y="176" fill="#e2e8f0" font-weight="600" font-size="11">Nucleo Goccia d₀ ≈ 2.5 mm</text>
-    <text x="210" y="191" fill="#94a3b8" font-size="9.5">Combustibile liquido in sospensione</text>
+    <text x="210" y="176" fill="#e2e8f0" font-weight="600" font-size="11">Droplet Core d₀ ≈ 2.5 mm</text>
+    <text x="210" y="191" fill="#94a3b8" font-size="9.5">Suspended liquid fuel</text>
 
     <!-- Callout 2: Flame Front -->
     <path d="M 503 158 L 540 120 L 630 120" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="3 3" />
     <circle cx="503" cy="158" r="3" fill="#38bdf8" />
-    <text x="550" y="115" fill="#38bdf8" font-weight="700" font-size="11">Fronte di Fiamma Sferico</text>
-    <text x="550" y="130" fill="#94a3b8" font-size="9.5">Simmetria radiale pura • Cool Flame</text>
+    <text x="550" y="115" fill="#38bdf8" font-weight="700" font-size="11">Spherical Flame Front</text>
+    <text x="550" y="130" fill="#94a3b8" font-size="9.5">Pure radial symmetry • Cool Flame</text>
 
     <!-- Callout 3: Quartz Fiber Support -->
     <path d="M 230 260 L 230 330 L 170 330" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 3" />
     <circle cx="230" cy="260" r="3" fill="#64748b" />
-    <text x="75" y="326" fill="#cbd5e1" font-weight="600" font-size="11">Fibre di quarzo (Tether)</text>
-    <text x="75" y="341" fill="#94a3b8" font-size="9.5">Vincolo a conducibilità minima</text>
+    <text x="75" y="326" fill="#cbd5e1" font-weight="600" font-size="11">Quartz fibers (Tether)</text>
+    <text x="75" y="341" fill="#94a3b8" font-size="9.5">Minimum-conductivity support</text>
 
     <!-- Bottom HUD Bar -->
     <rect x="25" y="456" width="750" height="40" rx="8" fill="#0f172a" fill-opacity="0.9" stroke="#1e293b" />
     <circle cx="45" cy="476" r="5" fill="#38bdf8" />
     <text x="60" y="480" fill="#e2e8f0" font-size="10.5">
-      <tspan font-weight="700" fill="#38bdf8">EVIDENZA SPERIMENTALE NASA PSI:</tspan>
-      In microgravità, l'assenza di galleggiamento elimina il cono convettivo. La fiamma è perfettamente sferica e brucia a temperature inferiori.
+      <tspan font-weight="700" fill="#38bdf8">NASA PSI EXPERIMENTAL EVIDENCE:</tspan>
+      In microgravity, the absence of buoyancy removes the convective cone. The flame is perfectly spherical and burns at lower temperatures.
     </text>
   </g>
 </svg>

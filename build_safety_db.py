@@ -45,63 +45,54 @@ from flame.safety import CANONICAL_UNITS, F_TO_K
 #   compliant_zone -> l'intervallo [lower, upper] e' la zona conforme (fuori = NON CONFORME)
 #   hazard_zone    -> l'intervallo [lower, upper] e' la zona di rischio (dentro = NON CONFORME / RISCHIO)
 # lower/upper: NaN = illimitato; lower_inclusive/upper_inclusive per i bordi.
-# limit_type: requisito | capacita_dispositivo | soglia_sperimentale | riferimento_progetto
+# limit_type: requirement | device_capability | experimental_threshold | design_reference
 # applies_by_default=False: ambito ristretto (es. volumi inertizzati, capacita' di un dispositivo):
 #   escluso dai controlli automatici, si attiva con include_all=True o limit_ids=[...]
 # ---------------------------------------------------------------------------
 NaN = float("nan")
 LIMIT_RULES: list[dict] = [
     dict(limit_id="SAF-001", parameter="burn_length", lower=NaN, upper=15.0, bound_type="compliant_zone",
-         limit_type="requisito", scope="Accettazione materiali: test di infiammabilita' verso l'alto (NHB 8060.16)",
-         description="Il campione acceso non deve sostenere una fiamma che propaga oltre 15 cm.",
+         limit_type="requirement", scope="Material acceptance: upward flammability test (NHB 8060.16)",
+         description="The ignited sample must not sustain a flame that spreads beyond 15 cm.",
          file_hint="Fire Safety Applications", anchor="propagating more than a stated limit (15 cm"),
     dict(limit_id="SAF-002", parameter="air_velocity", lower=8.0, upper=20.0, bound_type="compliant_zone",
-         limit_type="riferimento_progetto", scope="Ventilazione nominale cabina (Shuttle, circuito chiuso)",
-         description="Velocita' nominale dell'aria in cabina tra 8 e 20 cm/s.",
+         limit_type="design_reference", scope="Nominal cabin ventilation (Shuttle, closed loop)",
+         description="Nominal cabin air velocity between 8 and 20 cm/s.",
          file_hint="Fire Safety Applications", anchor="nominal air velocities between 8 and"),
     dict(limit_id="SAF-003", parameter="air_velocity", lower=8.0, upper=20.0, bound_type="hazard_zone",
-         limit_type="soglia_sperimentale", scope="Propagazione della fiamma su carta in microgravita'",
-         description="Il massimo rischio di propagazione e' a velocita' di flusso forzato intermedie, "
-                     "nell'intervallo della ventilazione dello Shuttle (8-20 cm/s): li' la fiamma puo' "
-                     "propagare piu' velocemente che in gravita' normale.",
+         limit_type="experimental_threshold", scope="Flame spread over paper in microgravity",
+         description="The highest spread hazard is at intermediate forced-flow velocities, within the Shuttle ventilation range (8-20 cm/s): there the flame can spread faster than in normal gravity.",
          file_hint="Fire Safety Applications",
          anchor="fire hazard for paper appears to be at intermediate forced-flow velocities"),
     dict(limit_id="SAF-004", parameter="oxygen_concentration", lower=15.0, upper=NaN, bound_type="hazard_zone",
-         limit_type="soglia_sperimentale", scope="Infiammabilita' di materiali sottili (carta) in microgravita' "
-                                                 "con flusso forzato intermedio",
-         description="In microgravita' con flusso intermedio la carta puo' bruciare con O2 fino al 15%, "
-                     "sotto il limite di infiammabilita' misurato in gravita' normale.",
+         limit_type="experimental_threshold", scope="Flammability of thin materials (paper) in microgravity with intermediate forced flow",
+         description="In microgravity with intermediate flow, paper can burn with O2 as low as 15%, below the flammability limit measured in normal gravity.",
          file_hint="Fire Safety Applications", anchor="may burn at oxygen concentrations as low as 15 percent"),
     dict(limit_id="SAF-005", parameter="oxygen_concentration", lower=NaN, upper=21.0, bound_type="compliant_zone",
-         limit_type="riferimento_progetto", scope="Atmosfera di riferimento della cabina (aria a livello del mare)",
-         description="Atmosfera di base = aria a livello del mare; concentrazioni superiori rendono i materiali "
-                     "piu' infiammabili. Il valore 21% (20.95%) e' la composizione standard dell'aria: il documento "
-                     "cita 'sea-level air' senza riportare il numero.",
+         limit_type="design_reference", scope="Cabin reference atmosphere (sea-level air)",
+         description="Baseline atmosphere = sea-level air; higher concentrations make materials more flammable. The 21% (20.95%) value is the standard air composition: the document cites 'sea-level air' without stating the number.",
          value_in_text=False,
          file_hint="Fire Safety Applications", anchor="uses standard sea-level air as its baseline atmosphere"),
     dict(limit_id="SAF-006", applies_by_default=False, parameter="oxygen_concentration", lower=NaN, upper=6.0, bound_type="compliant_zone",
-         limit_type="soglia_sperimentale", scope="Volumi non abitati inertizzati (es. armadi elettrici)",
-         description="Un gas inerte che conserva il 6% di O2 puo' essere di fatto sicuro contro l'incendio; "
-                     "il documento non indica un limite superiore oltre il 6%.",
+         limit_type="experimental_threshold", scope="Inerted uninhabited volumes (e.g. electrical cabinets)",
+         description="An inert gas that retains 6% O2 can effectively be fire-safe; the document gives no upper limit beyond 6%.",
          file_hint="Fire Safety Applications", anchor="6 percent or greater oxygen concentration may be effec"),
     dict(limit_id="SAF-007", parameter="material_separation", lower=1.3, upper=NaN, bound_type="compliant_zone",
-         lower_inclusive=False, limit_type="soglia_sperimentale",
-         scope="Distanza tra materiali infiammabili (Skylab 4, 1974)",
-         description="In orbita il fuoco si e' propagato da un materiale all'altro attraverso uno spazio di "
-                     "1.3 cm: distanze <= 1.3 cm non impediscono la propagazione.",
+         lower_inclusive=False, limit_type="experimental_threshold",
+         scope="Spacing between flammable materials (Skylab 4, 1974)",
+         description="In orbit, fire spread from one material to another across a 1.3 cm gap: distances <= 1.3 cm do not prevent spread.",
          file_hint="Fire Safety Applications", anchor="spread from one material to another over a gap of 1.3 cm"),
     dict(limit_id="SAF-008", applies_by_default=False, parameter="temperature", lower=NaN, upper=F_TO_K(2000.0), bound_type="compliant_zone",
-         limit_type="capacita_dispositivo", scope="Protezione termica multistrato (coperta/riparo antincendio NASA Langley)",
-         description="Le coperte termiche multistrato resistono a temperature esterne fino a 2000 °F (1366 K).",
+         limit_type="device_capability", scope="Multilayer thermal protection (NASA Langley fire blanket/shelter)",
+         description="Multilayer thermal blankets withstand external temperatures up to 2000 °F (1366 K).",
          file_hint="Multilayered Fire Protection", anchor="external temperatures of up to 2000 degrees Fahrenheit"),
     dict(limit_id="SAF-009", applies_by_default=False, parameter="ammonia_concentration", lower=NaN, upper=30000.0, bound_type="compliant_zone",
-         limit_type="capacita_dispositivo", scope="Maschera d'emergenza dell'equipaggio (cartuccia filtrante)",
-         description="La cartuccia protegge da un piccolo incendio oppure da 30 000 ppmv (3%) di ammoniaca "
-                     "per oltre 15 minuti.",
+         limit_type="device_capability", scope="Crew emergency mask (filter cartridge)",
+         description="The cartridge protects against a small fire or 30 000 ppmv (3%) ammonia for more than 15 minutes.",
          file_hint="Maturation Team", anchor="30,000 ppmv"),
     dict(limit_id="SAF-010", applies_by_default=False, parameter="exposure_time", lower=NaN, upper=15.0, bound_type="compliant_zone",
-         limit_type="capacita_dispositivo", scope="Maschera d'emergenza dell'equipaggio (durata garantita)",
-         description="Durata di protezione garantita della maschera: > 15 minuti (esposizioni fino a 15 min coperte).",
+         limit_type="device_capability", scope="Crew emergency mask (guaranteed duration)",
+         description="Guaranteed mask protection time: > 15 minutes (exposures up to 15 min covered).",
          file_hint="Maturation Team", anchor="ammonia for >15 min"),
 ]
 
@@ -226,7 +217,7 @@ def build_limits(pages: pd.DataFrame) -> pd.DataFrame:
             "description": rule["description"], "value_in_text": rule.get("value_in_text", True),
             "file_name": hit.file_name, "page_number": int(hit.page_number), "doc_type": hit.doc_type,
             "quote": sentence_around(hit.text, rule["anchor"]),
-            "citation": f"[Fonte: {SAFETY_TAG} | {hit.file_name}, p. {int(hit.page_number)}]",
+            "citation": f"[Source: {SAFETY_TAG} | {hit.file_name}, p. {int(hit.page_number)}]",
         })
     return pd.DataFrame(rows)
 
@@ -255,7 +246,7 @@ def build_requirements(pages: pd.DataFrame) -> pd.DataFrame:
                 text = body[len(title):].strip() if title and body.lower().startswith(flat(title)[:20]) else body
                 rows.append({"requirement_id": rid, "standard": "NASA-STD-3001 Volume " + vol[1], "title": title,
                              "text": text, "related_limit_ids": "", "file_name": fname, "page_number": int(r.page_number),
-                             "citation": f"[Fonte: {SAFETY_TAG} | {fname}, p. {int(r.page_number)}]"})
+                             "citation": f"[Source: {SAFETY_TAG} | {fname}, p. {int(r.page_number)}]"})
     df = pd.DataFrame(rows).drop_duplicates("requirement_id") if rows else pd.DataFrame()
     return df
 

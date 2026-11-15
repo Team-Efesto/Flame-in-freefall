@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NASA PSI Combustion Laboratory • Mappe Interattive &amp; Simulazioni Parametriche (g / g_e)</title>
+  <title>NASA PSI Combustion Laboratory • Interactive Maps &amp; Parametric Simulations (g / g_e)</title>
 
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -142,7 +142,7 @@
   <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-4 opacity-0">
     <div class="flex items-center gap-3 bg-[#111827] border border-sky-500/50 text-slate-100 px-4 py-3 rounded-xl shadow-2xl">
       <span class="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-      <span id="toastMessage" class="text-sm font-medium">Operazione completata</span>
+      <span id="toastMessage" class="text-sm font-medium">Operation completed</span>
     </div>
   </div>
 
@@ -170,7 +170,7 @@
               </span>
             </div>
             <h1 class="text-sm sm:text-base lg:text-lg font-bold text-white tracking-tight">
-              Laboratorio Interattivo Multi-Esperimento: Effetti della Gravità (<span class="text-sky-400 font-mono">g/g_e</span>)
+              Interactive Multi-Experiment Laboratory: Effects of Gravity (<span class="text-sky-400 font-mono">g/g_e</span>)
             </h1>
           </div>
         </div>
@@ -192,14 +192,14 @@
             <span class="text-slate-500 text-[10px]">kPa¹·⁸·gₑ</span>
           </div>
           <div id="badgeRegimePill" class="bg-red-500/15 border border-red-500/40 text-red-300 px-2.5 py-1 rounded-lg font-bold">
-            Dominato da Galleggiamento
+            Buoyancy Dominated
           </div>
           <button
             id="toggleGlobalControlsBtn"
             type="button"
             class="lg:hidden bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-2.5 py-1 rounded-lg text-[11px] font-sans font-semibold cursor-pointer"
           >
-            Controlli ▲
+            Controls ▲
           </button>
         </div>
       </div>
@@ -211,7 +211,7 @@
           <div class="bg-[#111827] border border-[#1e293b] rounded-xl px-3 py-2 flex flex-col justify-between">
             <div class="flex items-center justify-between gap-1 mb-1">
               <label for="gravitySlider" class="text-xs font-semibold text-slate-200">
-                Gravità <span class="font-mono text-sky-400">g/g_e</span>
+                Gravity <span class="font-mono text-sky-400">g/g_e</span>
               </label>
               <div class="flex items-center gap-1.5">
                 <input
@@ -238,7 +238,7 @@
             <div class="flex items-center justify-between mt-1">
               <label class="inline-flex items-center gap-1.5 text-[10px] font-mono text-sky-300 cursor-pointer select-none">
                 <input id="microZoomCheckbox" type="checkbox" class="rounded border-slate-600 bg-[#0b1120] text-sky-400 focus:ring-0 cursor-pointer" />
-                <span>Zoom Microgravità (0.0001–0.05 gₑ)</span>
+                <span>Microgravity zoom (0.0001–0.05 gₑ)</span>
               </label>
             </div>
           </div>
@@ -247,7 +247,7 @@
           <div class="bg-[#111827] border border-[#1e293b] rounded-xl px-3 py-2 flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
               <label for="pressureSlider" class="text-xs font-semibold text-slate-200">
-                Pressione <span class="font-mono text-amber-400">p</span>
+                Pressure <span class="font-mono text-amber-400">p</span>
               </label>
               <span id="pressureDisplay" class="font-mono text-xs font-bold text-amber-400">100 kPa (1.00 p₀)</span>
             </div>
@@ -272,7 +272,7 @@
           <div class="bg-[#111827] border border-[#1e293b] rounded-xl px-3 py-2 flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
               <label for="uInfSlider" class="text-xs font-semibold text-slate-200">
-                Flusso Forzato <span class="font-mono text-emerald-400">U_∞</span>
+                Forced Flow <span class="font-mono text-emerald-400">U_∞</span>
               </label>
               <span id="uInfDisplay" class="font-mono text-xs font-bold text-emerald-400">10 cm/s</span>
             </div>
@@ -286,7 +286,7 @@
               class="nasa-slider nasa-slider-emerald"
             />
             <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
-              <span>0 (Quiescente)</span>
+              <span>0 (Quiescent)</span>
               <span>10 (ISS/CFD)</span>
               <span>20</span>
               <span>40 cm/s</span>
@@ -297,7 +297,7 @@
           <div class="bg-[#111827] border border-[#1e293b] rounded-xl px-3 py-2 flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
               <label for="ozoneSlider" class="text-xs font-semibold text-slate-200">
-                Sensibilizz. Ozono <span class="font-mono text-purple-400">O₃</span>
+                Ozone Sensitization <span class="font-mono text-purple-400">O₃</span>
               </label>
               <span id="ozoneDisplay" class="font-mono text-xs font-bold text-purple-400">500 ppm</span>
             </div>
@@ -321,30 +321,30 @@
 
         <!-- Riga Preset Ambienti Rapidi -->
         <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">Preset Ambienti:</span>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">Environment presets:</span>
           <button type="button" data-g="0.0001" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-sky-500/15 border border-[#1e293b] hover:border-sky-500/50 text-[11px] font-medium text-sky-300 transition cursor-pointer">
-            ISS Microgravità (10⁻⁴ gₑ)
+            ISS Microgravity (10⁻⁴ gₑ)
           </button>
           <button type="button" data-g="0.16" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-sky-500/15 border border-[#1e293b] hover:border-sky-500/50 text-[11px] font-medium text-slate-200 transition cursor-pointer">
-            Luna (0.16 gₑ - Case 5)
+            Moon (0.16 gₑ - Case 5)
           </button>
           <button type="button" data-g="0.192" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-amber-500/15 border border-[#1e293b] hover:border-amber-500/50 text-[11px] font-medium text-amber-200 transition cursor-pointer">
-            Volo Parabolico (0.192 gₑ - Case 5')
+            Parabolic Flight (0.192 gₑ - Case 5')
           </button>
           <button type="button" data-g="0.36" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-amber-500/15 border border-[#1e293b] hover:border-amber-500/50 text-[11px] font-medium text-amber-300 transition cursor-pointer">
-            Marte (0.36 gₑ - Case 4)
+            Mars (0.36 gₑ - Case 4)
           </button>
           <button type="button" data-g="1.00" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/60 text-[11px] font-semibold text-emerald-300 transition cursor-pointer">
-            Terra (1.00 gₑ - Case 1)
+            Earth (1.00 gₑ - Case 1)
           </button>
           <button type="button" data-g="2.00" data-p="100" class="preset-btn px-2.5 py-1 rounded-lg bg-[#111827] hover:bg-red-500/15 border border-[#1e293b] hover:border-red-500/50 text-[11px] font-medium text-red-300 transition cursor-pointer">
-            Ipergravità (2.00 gₑ)
+            Hypergravity (2.00 gₑ)
           </button>
         </div>
       </div>
 
       <!-- Barra di Navigazione Tab Esperimenti NASA PSI -->
-      <nav aria-label="Esperimenti NASA PSI" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+      <nav aria-label="NASA PSI experiments" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
         <button type="button" data-tab="tab-psi117" class="psi-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer bg-sky-500/20 border-sky-400 text-white shadow-sm">
           PSI-117 • Upward Spread
         </button>
@@ -364,7 +364,7 @@
           PSI-41 • Saffire I–VI
         </button>
         <button type="button" data-tab="tab-compare" class="psi-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer bg-[#111827] border-[#1e293b] text-emerald-400 hover:text-emerald-300 hover:border-emerald-500/50">
-          Confronto Globale &amp; Export
+          Global Comparison &amp; Export
         </button>
       </nav>
     </div>
@@ -394,7 +394,7 @@
               Upward Flame Spread &amp; Buoyant Flow Scaling (Fire Scale Modeling)
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Indagine numerica CFD 3D transitoria e sperimentale sulla propagazione laminare verso l'alto su combustibile solido sottile (tessuto <strong>SIBAL</strong>: 75% cellulosa, 25% fibra di vetro inerte, $18.2\text{ mg/cm}^2$). Dimostra come gli strati limite scali con $\delta \sim p^{-0.5}g^{-0.25}$, mentre la velocità di galleggiamento segue $U_B \sim p^0 g^{0.5}$ e lo scaling empirico $p^{1.8}g$ supera $p^2g$ nel correlare i dati tra gravità parziale e pressione ridotta.
+              Transient 3D CFD and experimental study of laminar upward flame spread over a thin solid fuel (<strong>SIBAL</strong> fabric: 75% cellulose, 25% inert glass fiber, $18.2\text{ mg/cm}^2$). It shows that boundary layers scale as $\delta \sim p^{-0.5}g^{-0.25}$, while the buoyant velocity follows $U_B \sim p^0 g^{0.5}$ and the empirical $p^{1.8}g$ scaling outperforms $p^2g$ in correlating data across partial gravity and reduced pressure.
             </p>
           </div>
           <!-- Telemetria specifica PSI-117 -->
@@ -412,7 +412,7 @@
               <div id="psi117Vf" class="text-base font-bold text-emerald-400">3.00 cm/s</div>
             </div>
             <div class="bg-[#0b1120] border border-[#1e293b] rounded-xl p-3">
-              <div class="text-[10px] text-slate-400">Flusso q''_net</div>
+              <div class="text-[10px] text-slate-400">Flux q''_net</div>
               <div id="psi117Qnet" class="text-base font-bold text-orange-400">12300 W/m²</div>
             </div>
           </div>
@@ -425,11 +425,11 @@
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="flex items-center justify-between gap-2 mb-2">
             <div>
-              <h3 class="text-sm font-bold text-white">Simulatore Visivo 2D: Campione SIBAL (20 cm) &amp; Fronti $x_p(t), x_b(t)$</h3>
-              <p class="text-[11px] text-slate-400">Strato limite termico $\delta_T$, standoff fiamma $\delta_f$, fronti di pirolisi/burnout e vettori $U_B$</p>
+              <h3 class="text-sm font-bold text-white">2D Visual Simulator: SIBAL Sample (20 cm) &amp; Fronts $x_p(t), x_b(t)$</h3>
+              <p class="text-[11px] text-slate-400">Thermal boundary layer $\delta_T$, flame standoff $\delta_f$, pyrolysis/burnout fronts and $U_B$ vectors</p>
             </div>
             <button id="resetFlameFront117Btn" type="button" class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-sky-300 cursor-pointer">
-              Riavvia Fronte
+              Restart Front
             </button>
           </div>
           <div id="canvas117Wrap" class="relative w-full flex-1 min-h-[360px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden">
@@ -440,9 +440,9 @@
         <!-- Chart 1A: Fluidodinamica e Strati Limite + Punti CFD -->
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-sky-400 uppercase">Grafico 1A • Fig. 5 Thinnakornsutibutr et al. (2025)</span>
-            <h3 class="text-sm font-bold text-white">Spessori Strato Limite ($\delta_T/\delta_{T0}, \delta_V/\delta_{V0}$) &amp; Velocità $V_{\max}/V_{\max 0}$ vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Confronto continuo con i punti CFD esatti: Case 1 ($1.0g_e$), Case 4' ($0.399g_e$), Case 4 ($0.36g_e$), Case 5' ($0.192g_e$), Case 5 ($0.16g_e$).</p>
+            <span class="text-[10px] font-mono text-sky-400 uppercase">Chart 1A • Fig. 5 Thinnakornsutibutr et al. (2025)</span>
+            <h3 class="text-sm font-bold text-white">Boundary Layer Thicknesses ($\delta_T/\delta_{T0}, \delta_V/\delta_{V0}$) &amp; Velocity $V_{\max}/V_{\max 0}$ vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Continuous comparison with the exact CFD points: Case 1 ($1.0g_e$), Case 4' ($0.399g_e$), Case 4 ($0.36g_e$), Case 5' ($0.192g_e$), Case 5 ($0.16g_e$).</p>
           </div>
           <div id="chart1A" class="w-full h-[360px]" style="width:100%;height:360px;"></div>
         </div>
@@ -453,9 +453,9 @@
         <!-- Chart 1B: Upward Flame Spread Rate V_f -->
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-emerald-400 uppercase">Grafico 1B • Fig. 12 Validazione Multi-Campagna</span>
-            <h3 class="text-sm font-bold text-white">Velocità Propagazione $V_f$ [cm/s]: Scaling Empirico $p^{1.8}g$ vs Teoria $(p^2g)^{0.25}$</h3>
-            <p class="text-[11px] text-slate-400">Confronto tra $V_f = 0.000585\,p^{1.8}g$, legge teorica $(p^2g)^{0.25}$ e dataset Kleinhenz (2008), Thomsen (2019), Carmignani (2022), Neupane &amp; Liao (2024).</p>
+            <span class="text-[10px] font-mono text-emerald-400 uppercase">Chart 1B • Fig. 12 Multi-Campaign Validation</span>
+            <h3 class="text-sm font-bold text-white">Flame Spread Rate $V_f$ [cm/s]: Empirical Scaling $p^{1.8}g$ vs Theory $(p^2g)^{0.25}$</h3>
+            <p class="text-[11px] text-slate-400">Comparison between $V_f = 0.000585\,p^{1.8}g$, the theoretical $(p^2g)^{0.25}$ law and the Kleinhenz (2008), Thomsen (2019), Carmignani (2022), Neupane &amp; Liao (2024) datasets.</p>
           </div>
           <div id="chart1B" class="w-full h-[350px]" style="width:100%;height:350px;"></div>
         </div>
@@ -463,9 +463,9 @@
         <!-- Chart 1C: Surface Heat Fluxes -->
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-amber-400 uppercase">Grafico 1C • Fig. 14 Bilancio Termico Superficiale</span>
-            <h3 class="text-sm font-bold text-white">Flussi Termici Superficiali ($\dot{q}''_{fc}, \dot{q}''_{fr}, \dot{q}''_{rs}, \dot{q}''_{\text{net}}$) vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">L'irraggiamento incidente $\dot{q}''_{fr}$ è insensibile a $g$, mentre $\dot{q}''_{fc}$ cala con $g^{0.25}$ fino a incontrare la perdita radiativa $|\dot{q}''_{rs}|$ (zona di estinzione ombreggiata).</p>
+            <span class="text-[10px] font-mono text-amber-400 uppercase">Chart 1C • Fig. 14 Surface Heat Balance</span>
+            <h3 class="text-sm font-bold text-white">Surface Heat Fluxes ($\dot{q}''_{fc}, \dot{q}''_{fr}, \dot{q}''_{rs}, \dot{q}''_{\text{net}}$) vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Incident radiation $\dot{q}''_{fr}$ is insensitive to $g$, while $\dot{q}''_{fc}$ drops as $g^{0.25}$ until it meets the radiative loss $|\dot{q}''_{rs}|$ (shaded extinction zone).</p>
           </div>
           <div id="chart1C" class="w-full h-[350px]" style="width:100%;height:350px;"></div>
         </div>
@@ -488,23 +488,23 @@
               <span class="text-xs font-mono text-sky-400">• Facility: ISS Microgravity Science Glovebox (MSG)</span>
             </div>
             <h2 class="text-lg sm:text-xl font-bold text-white">
-              Confined Combustion: Interazione Fiamma-Parete, Espansione Termica &amp; Quenching Conduttivo
+              Confined Combustion: Flame-Wall Interaction, Thermal Expansion &amp; Conductive Quenching
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Studia come le pareti di un condotto confinante di semi-altezza $H_{\text{duct}}$ modifichino la propagazione della fiamma al variare di $g$. Riducendo $g$, lo standoff $\delta_f \propto g^{-0.25}$ cresce fino a interagire con le pareti: a confinamento intermedio ($\delta_f / H_{\text{duct}} \approx 0.35–0.70$) l'espansione termica e la riflessione radiativa <strong>accelerano</strong> la fiamma, mentre a confinamento estremo ($\delta_f / H_{\text{duct}} \to 1$) le perdite conduttive alle pareti provocano il <strong>quenching</strong>.
+              Studies how the walls of a confining duct with half-height $H_{\text{duct}}$ change flame spread as $g$ varies. As $g$ decreases, the standoff $\delta_f \propto g^{-0.25}$ grows until it interacts with the walls: at intermediate confinement ($\delta_f / H_{\text{duct}} \approx 0.35–0.70$) thermal expansion and radiative reflection <strong>accelerate</strong> the flame, while at extreme confinement ($\delta_f / H_{\text{duct}} \to 1$) conductive losses to the walls cause <strong>quenching</strong>.
             </p>
           </div>
 
           <!-- Controllo Locale H_duct + Telemetria PSI-25 -->
           <div class="bg-[#0b1120] border border-amber-500/40 rounded-xl p-3.5 w-full lg:w-80 space-y-2 shrink-0">
             <div class="flex items-center justify-between">
-              <label for="hDuctSlider" class="text-xs font-semibold text-amber-300">Semi-Altezza Condotto $H_{\text{duct}}$</label>
+              <label for="hDuctSlider" class="text-xs font-semibold text-amber-300">Duct Half-Height $H_{\text{duct}}$</label>
               <span id="hDuctDisplay" class="font-mono text-xs font-bold text-white">6.25 cm</span>
             </div>
             <input id="hDuctSlider" type="range" min="1.5" max="10.0" step="0.25" value="6.25" class="nasa-slider nasa-slider-amber" />
             <div class="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
               <div>
-                <span class="text-slate-400 block text-[10px]">Rapporto $\delta_f / H_{\text{duct}}$:</span>
+                <span class="text-slate-400 block text-[10px]">Ratio $\delta_f / H_{\text{duct}}$:</span>
                 <span id="psi25ConfRatio" class="text-sky-400 font-bold">0.07</span>
               </div>
               <div>
@@ -520,8 +520,8 @@
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <h3 class="text-sm font-bold text-white">Simulatore Canale Confinato ($H_{\text{duct}}$): Sviluppo $\delta_f$ vs Pareti</h3>
-            <p class="text-[11px] text-slate-400">Visualizza l'espansione di $\delta_f$ verso le pareti del condotto e la transizione tra accelerazione per espansione termica e quenching conduttivo.</p>
+            <h3 class="text-sm font-bold text-white">Confined Channel Simulator ($H_{\text{duct}}$): $\delta_f$ Growth vs Walls</h3>
+            <p class="text-[11px] text-slate-400">Shows $\delta_f$ expanding toward the duct walls and the transition from thermal-expansion acceleration to conductive quenching.</p>
           </div>
           <div id="canvas25Wrap" class="relative w-full flex-1 min-h-[360px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden">
             <canvas id="canvasPsi25" class="block w-full h-full"></canvas>
@@ -530,9 +530,9 @@
 
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-amber-400 uppercase">Mappa 2A • Effetto Sezione Condotto</span>
-            <h3 class="text-sm font-bold text-white">Fattore di Accelerazione ($V_{f,\text{conf}}/V_{f,\text{open}}$) &amp; Confinamento ($\delta_f/H_{\text{duct}}$) vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Confronto tra condotto stretto ($2\text{ cm}$), medio ($4\text{ cm}$), largo ($6.25\text{ cm}$) e il valore $H_{\text{duct}}$ selezionato.</p>
+            <span class="text-[10px] font-mono text-amber-400 uppercase">Map 2A • Duct Cross-Section Effect</span>
+            <h3 class="text-sm font-bold text-white">Acceleration Factor ($V_{f,\text{conf}}/V_{f,\text{open}}$) &amp; Confinement ($\delta_f/H_{\text{duct}}$) vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Comparison between a narrow ($2\text{ cm}$), medium ($4\text{ cm}$) and wide ($6.25\text{ cm}$) duct and the selected $H_{\text{duct}}$.</p>
           </div>
           <div id="chart2A" class="w-full h-[360px]" style="width:100%;height:360px;"></div>
         </div>
@@ -541,9 +541,9 @@
       <!-- Riga 2: Map 2B (2D Flammability & Extinction Regime Map U_inf vs g/g_e) -->
       <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-sky-400 uppercase">Mappa 2B • Mappa Bidimensionale di Infiammabilità &amp; Estinzione</span>
-          <h3 class="text-sm font-bold text-white">Regimi di Combustione Confinata: Velocità Flusso Forzato $U_\infty$ [cm/s] vs Gravità $g/g_e$ (Scala Log)</h3>
-          <p class="text-[11px] text-slate-400">Identifica la <strong>Zona di Quenching Conduttivo</strong> (basso $g$ e basso $U_\infty$), la <strong>Zona Accelerata da Riflessione Radiativa</strong>, la <strong>Propagazione Naturale</strong> e il <strong>Limite di Blow-off</strong> ad alto $U_\infty$.</p>
+          <span class="text-[10px] font-mono text-sky-400 uppercase">Map 2B • 2D Flammability &amp; Extinction Map</span>
+          <h3 class="text-sm font-bold text-white">Confined Combustion Regimes: Forced Flow Velocity $U_\infty$ [cm/s] vs Gravity $g/g_e$ (Log Scale)</h3>
+          <p class="text-[11px] text-slate-400">Identifies the <strong>Conductive Quenching Zone</strong> (low $g$ and low $U_\infty$), the <strong>Radiative-Reflection Accelerated Zone</strong>, <strong>Natural Spread</strong> and the <strong>Blow-off Limit</strong> at high $U_\infty$.</p>
         </div>
         <div id="chart2B" class="w-full h-[380px]" style="width:100%;height:380px;"></div>
       </div>
@@ -568,12 +568,12 @@
               Dynamics of Cool Flames, Warm Flames &amp; Low-Temperature NTC Kinetics
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              In microgravità ($g &lt; 0.03\,g_e$), la scomparsa della convezione naturale dilata il tempo di residenza e incrementa le perdite radiative della fiamma calda ($T_f &gt; 1500\text{ K}$), causandone l'estinzione radiativa e la transizione verso una <strong>Cool Flame sferica priva di fuliggine</strong> ($550–780\text{ K}$) sostenuta dalla cinetica NTC ($\text{RO}_2 \to \text{QOOH}$) e tracciata tramite PLIF $355\text{ nm}$ della formaldeide ($\text{CH}_2\text{O}$, Data ID 5). L'aggiunta di ozono ($\text{O}_3$) espande l'isola di stabilità delle Cool e Warm Flames.
+              In microgravity ($g &lt; 0.03\,g_e$), the loss of natural convection lengthens the residence time and increases the radiative losses of the hot flame ($T_f &gt; 1500\text{ K}$), causing radiative extinction and the transition to a <strong>soot-free spherical Cool Flame</strong> ($550–780\text{ K}$) sustained by NTC kinetics ($\text{RO}_2 \to \text{QOOH}$) and tracked by $355\text{ nm}$ PLIF of formaldehyde ($\text{CH}_2\text{O}$, Data ID 5). Adding ozone ($\text{O}_3$) expands the stability island of Cool and Warm Flames.
             </p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full lg:w-auto shrink-0 font-mono">
             <div class="bg-[#0b1120] border border-[#1e293b] rounded-xl p-3">
-              <div class="text-[10px] text-slate-400">Temp. Picco T_f</div>
+              <div class="text-[10px] text-slate-400">Peak Temp. T_f</div>
               <div id="psi142Tf" class="text-base font-bold text-orange-400">1810 K</div>
             </div>
             <div class="bg-[#0b1120] border border-[#1e293b] rounded-xl p-3">
@@ -592,8 +592,8 @@
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <h3 class="text-sm font-bold text-white">Confronto Morfologico: Cool Flame Sferica (µg) vs Fiamma a Goccia Fuligginosa (1 gₑ)</h3>
-            <p class="text-[11px] text-slate-400">A sinistra: riferimento terrestre a goccia ($1\,g_e$, fuliggine gialla). A destra: stato live al tuo $g/g_e$ e $\text{O}_3$ (sfera blu $\text{CH}_2\text{O}^*$ in microgravità).</p>
+            <h3 class="text-sm font-bold text-white">Morphological Comparison: Spherical Cool Flame (µg) vs Sooty Teardrop Flame (1 gₑ)</h3>
+            <p class="text-[11px] text-slate-400">Left: Earth teardrop reference ($1\,g_e$, yellow soot). Right: live state at your $g/g_e$ and $\text{O}_3$ (blue $\text{CH}_2\text{O}^*$ sphere in microgravity).</p>
           </div>
           <div id="canvas142Wrap" class="relative w-full flex-1 min-h-[360px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden">
             <canvas id="canvasPsi142" class="block w-full h-full"></canvas>
@@ -602,9 +602,9 @@
 
         <div class="xl:col-span-6 bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-purple-400 uppercase">Mappa 3A • NASA PSI-142 Data IDs 1, 2, 3, 4</span>
-            <h3 class="text-sm font-bold text-white">Mappa Doppia di Estinzione &amp; Strain Rate ($\alpha$ [s⁻¹]) vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Mostra il limite superiore HFE (Hot Flame Extinction), il limite inferiore radiativo e l'isola di stabilità Cool Flame (CFE) espansa da $\text{O}_3$.</p>
+            <span class="text-[10px] font-mono text-purple-400 uppercase">Map 3A • NASA PSI-142 Data IDs 1, 2, 3, 4</span>
+            <h3 class="text-sm font-bold text-white">Dual Extinction &amp; Strain Rate Map ($\alpha$ [s⁻¹]) vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Shows the upper HFE (Hot Flame Extinction) limit, the lower radiative limit and the Cool Flame (CFE) stability island expanded by $\text{O}_3$.</p>
           </div>
           <div id="chart3A" class="w-full h-[360px]" style="width:100%;height:360px;"></div>
         </div>
@@ -613,9 +613,9 @@
       <!-- Riga 2: Map 3B -->
       <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-sky-400 uppercase">Mappa 3B • Profili Termici &amp; Specie Radicaliche (PLIF 355 nm Data ID 5)</span>
-          <h3 class="text-sm font-bold text-white">Temperatura Fiamma $T_f$ [K] (Hot &gt;1500 K → Warm 800–1100 K → Cool NTC 550–800 K) &amp; Radicali ($\text{OH}, \text{CH}_2\text{O}, \text{HO}_2/\text{H}_2\text{O}_2$)</h3>
-          <p class="text-[11px] text-slate-400">Evoluzione delle specie chimiche chiave al variare di $g/g_e$ e della sensibilizzazione con ozono $\text{O}_3$.</p>
+          <span class="text-[10px] font-mono text-sky-400 uppercase">Map 3B • Thermal Profiles &amp; Radical Species (PLIF 355 nm Data ID 5)</span>
+          <h3 class="text-sm font-bold text-white">Flame Temperature $T_f$ [K] (Hot &gt;1500 K → Warm 800–1100 K → Cool NTC 550–800 K) &amp; Radicals ($\text{OH}, \text{CH}_2\text{O}, \text{HO}_2/\text{H}_2\text{O}_2$)</h3>
+          <p class="text-[11px] text-slate-400">Evolution of the key chemical species as $g/g_e$ and ozone sensitization $\text{O}_3$ vary.</p>
         </div>
         <div id="chart3B" class="w-full h-[360px]" style="width:100%;height:360px;"></div>
       </div>
@@ -640,32 +640,32 @@
               Multistage n-Alkane &amp; DME High-Pressure Kinetics (Radical Index &amp; $[O_2]^n$ Scaling)
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Estende i risultati di PSI-142 ai grandi n-alcani ($n$-eptano $\text{C}_7$, $n$-ottano $\text{C}_8$, $n$-decano $\text{C}_{10}$, $n$-dodecano $\text{C}_{12}$) e al dimetiletere (DME) ad alte pressioni. Quantifica il <strong>Radical Index</strong> e lo scaling della concentrazione di ossigeno $[O_2]^n$ ($n = 1.5–2.0$) nella stabilizzazione di <em>Cool Flames</em>, <em>Transient Double Flames</em> e <em>Warm Flames</em> multistadio in funzione del numero di Damköhler $Da$.
+              Extends the PSI-142 results to large n-alkanes ($n$-heptane $\text{C}_7$, $n$-octane $\text{C}_8$, $n$-decane $\text{C}_{10}$, $n$-dodecane $\text{C}_{12}$) and to dimethyl ether (DME) at high pressure. It quantifies the <strong>Radical Index</strong> and the oxygen concentration scaling $[O_2]^n$ ($n = 1.5–2.0$) in the stabilization of multistage <em>Cool Flames</em>, <em>Transient Double Flames</em> and <em>Warm Flames</em> as a function of the Damköhler number $Da$.
             </p>
           </div>
 
           <!-- Controlli Locali PSI-164: Selettore Combustibile + Frazione Molare Ossigeno X_O2 -->
           <div class="bg-[#0b1120] border border-emerald-500/40 rounded-xl p-3.5 w-full lg:w-96 space-y-2.5 shrink-0">
             <div class="flex items-center justify-between gap-2">
-              <label for="fuelSelector164" class="text-xs font-semibold text-emerald-300">Combustibile:</label>
+              <label for="fuelSelector164" class="text-xs font-semibold text-emerald-300">Fuel:</label>
               <select id="fuelSelector164" class="bg-[#111827] border border-[#1e293b] rounded-lg px-2.5 py-1 text-xs font-mono text-white focus:outline-none focus:border-emerald-400 cursor-pointer">
-                <option value="DME">DME (Dimetiletere CH₃OCH₃)</option>
-                <option value="C7">n-Eptano (C₇H₁₆)</option>
-                <option value="C8">n-Ottano (C₈H₁₈)</option>
-                <option value="C10" selected>n-Decano (C₁₀H₂₂)</option>
-                <option value="C12">n-Dodecano (C₁₂H₂₆)</option>
+                <option value="DME">DME (Dimethyl ether CH₃OCH₃)</option>
+                <option value="C7">n-Heptane (C₇H₁₆)</option>
+                <option value="C8">n-Octane (C₈H₁₈)</option>
+                <option value="C10" selected>n-Decane (C₁₀H₂₂)</option>
+                <option value="C12">n-Dodecane (C₁₂H₂₆)</option>
               </select>
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label for="xo2Slider164" class="text-xs font-semibold text-slate-200">Frazione Molare Ossigeno $X_{\text{O}_2}$</label>
-                <span id="xo2Display164" class="font-mono text-xs font-bold text-emerald-400">0.21 (21% Aria)</span>
+                <label for="xo2Slider164" class="text-xs font-semibold text-slate-200">Oxygen Mole Fraction $X_{\text{O}_2}$</label>
+                <span id="xo2Display164" class="font-mono text-xs font-bold text-emerald-400">0.21 (21% Air)</span>
               </div>
               <input id="xo2Slider164" type="range" min="0.15" max="0.40" step="0.01" value="0.21" class="nasa-slider nasa-slider-emerald" />
             </div>
             <div class="flex justify-between font-mono text-[11px] pt-0.5 border-t border-[#1e293b]">
               <span class="text-slate-400">Radical Index: <strong id="psi164RadIdx" class="text-purple-400">1.24</strong></span>
-              <span class="text-slate-400">Esponente $n$: <strong id="psi164ExpN" class="text-amber-400">1.82</strong></span>
+              <span class="text-slate-400">Exponent $n$: <strong id="psi164ExpN" class="text-amber-400">1.82</strong></span>
             </div>
           </div>
         </div>
@@ -675,18 +675,18 @@
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-emerald-400 uppercase">Mappa 4A • Reattività Low-Temperature &amp; Radical Index</span>
-            <h3 class="text-sm font-bold text-white">Reattività LTC &amp; Radical Index ($[O_2]^n$ &amp; Lunghezza Catena) vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Bilancio tra cinetica di isomerizzazione $\text{RO}_2 \to \text{QOOH}$ e tempo di residenza convettivo ($Da$) al variare di $g/g_e$ per tutti i combustibili.</p>
+            <span class="text-[10px] font-mono text-emerald-400 uppercase">Map 4A • Low-Temperature Reactivity &amp; Radical Index</span>
+            <h3 class="text-sm font-bold text-white">LTC Reactivity &amp; Radical Index ($[O_2]^n$ &amp; Chain Length) vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Balance between $\text{RO}_2 \to \text{QOOH}$ isomerization kinetics and convective residence time ($Da$) as $g/g_e$ varies, for all fuels.</p>
           </div>
           <div id="chart4A" class="w-full h-[370px]" style="width:100%;height:370px;"></div>
         </div>
 
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-purple-400 uppercase">Mappa 4B • Diagramma di Fase Pressione vs Gravità</span>
-            <h3 class="text-sm font-bold text-white">Mappa di Accensione &amp; Regimi Multistadio: Pressione $p$ [kPa] vs Gravità $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Soglie di transizione tra <em>Estinzione/No Ignition</em>, <em>Cool Flame</em>, <em>Transient Double Flame</em> e <em>Hot Flame</em>.</p>
+            <span class="text-[10px] font-mono text-purple-400 uppercase">Map 4B • Pressure vs Gravity Phase Diagram</span>
+            <h3 class="text-sm font-bold text-white">Ignition &amp; Multistage Regime Map: Pressure $p$ [kPa] vs Gravity $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Transition thresholds between <em>Extinction/No Ignition</em>, <em>Cool Flame</em>, <em>Transient Double Flame</em> and <em>Hot Flame</em>.</p>
           </div>
           <div id="chart4B" class="w-full h-[370px]" style="width:100%;height:370px;"></div>
         </div>
@@ -709,23 +709,23 @@
               <span class="text-xs font-mono text-amber-400">• Facility: ISS Microgravity Science Glovebox (BASS / BASS-II)</span>
             </div>
             <h2 class="text-lg sm:text-xl font-bold text-white">
-              Burning and Suppression of Solids (BASS &amp; BASS-II): Limiti di Ossigeno (MOI) &amp; Spessore Combustibile
+              Burning and Suppression of Solids (BASS &amp; BASS-II): Oxygen Limits (MOI) &amp; Fuel Thickness
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Indaga la combustione e l'estinzione di materiali solidi (cotone, PMMA, Nomex, compositi SIBAL) a bordo della ISS. L'eliminazione del flusso di galleggiamento ($g \to 0$) riduce il raffreddamento convettivo e permette ai materiali di bruciare a concentrazioni di ossigeno <strong>inferiori rispetto alla Terra</strong> (MOI fino a $\sim 14.5\%$ in microgravità con ventilazione di cabina $5–20\text{ cm/s}$), finché le perdite radiative non estinguono la fiamma per $U_\infty \to 0$.
+              Investigates the burning and extinction of solid materials (cotton, PMMA, Nomex, SIBAL composites) aboard the ISS. Removing buoyant flow ($g \to 0$) reduces convective cooling and lets materials burn at oxygen concentrations <strong>lower than on Earth</strong> (MOI down to $\sim 14.5\%$ in microgravity with $5–20\text{ cm/s}$ cabin ventilation), until radiative losses extinguish the flame as $U_\infty \to 0$.
             </p>
           </div>
 
           <!-- Controllo Locale BASS: Spessore Campione Solido tau -->
           <div class="bg-[#0b1120] border border-cyan-500/40 rounded-xl p-3.5 w-full lg:w-80 space-y-2 shrink-0">
             <div class="flex items-center justify-between">
-              <label for="tauSliderBass" class="text-xs font-semibold text-cyan-300">Spessore Campione Solido $\tau$</label>
+              <label for="tauSliderBass" class="text-xs font-semibold text-cyan-300">Solid Sample Thickness $\tau$</label>
               <span id="tauDisplayBass" class="font-mono text-xs font-bold text-white">0.30 mm</span>
             </div>
             <input id="tauSliderBass" type="range" min="0.05" max="2.00" step="0.05" value="0.30" class="nasa-slider" />
             <div class="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
               <div>
-                <span class="text-slate-400 block text-[10px]">MOI Limite (% O₂):</span>
+                <span class="text-slate-400 block text-[10px]">MOI Limit (% O₂):</span>
                 <span id="bassMoiVal" class="text-cyan-400 font-bold">18.1 %</span>
               </div>
               <div>
@@ -741,18 +741,18 @@
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-cyan-400 uppercase">Mappa 5A • Limite Fondamentale di Infiammabilità BASS</span>
-            <h3 class="text-sm font-bold text-white">Minimum Oxygen Index (MOI %) &amp; Velocità di Quenching vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Mostra il minimo di MOI in microgravità con flusso ventilazione ($U_\infty = 5–20\text{ cm/s}$) e il risalire del limite $\text{O}_2$ in condizioni quiescenti ($U_\infty = 0$).</p>
+            <span class="text-[10px] font-mono text-cyan-400 uppercase">Map 5A • BASS Fundamental Flammability Limit</span>
+            <h3 class="text-sm font-bold text-white">Minimum Oxygen Index (MOI %) &amp; Quenching Velocity vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Shows the MOI minimum in microgravity with ventilation flow ($U_\infty = 5–20\text{ cm/s}$) and the rise of the $\text{O}_2$ limit under quiescent conditions ($U_\infty = 0$).</p>
           </div>
           <div id="chart5A" class="w-full h-[370px]" style="width:100%;height:370px;"></div>
         </div>
 
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-emerald-400 uppercase">Mappa 5B • Pirolisi Solida &amp; Inerzia Termica ($\rho_s c_s \tau$)</span>
-            <h3 class="text-sm font-bold text-white">Mass Burning Rate $\dot{m}''$ [g/m²/s] &amp; Temperatura Superficiale $T_s$ [K] vs $g/g_e$</h3>
-            <p class="text-[11px] text-slate-400">Confronto tra combustibili termicamente sottili ($\tau = 0.1\text{ mm}$), intermedi ($\tau = 0.6\text{ mm}$), spessi ($\tau = 1.8\text{ mm}$) e lo spessore $\tau$ selezionato.</p>
+            <span class="text-[10px] font-mono text-emerald-400 uppercase">Map 5B • Solid Pyrolysis &amp; Thermal Inertia ($\rho_s c_s \tau$)</span>
+            <h3 class="text-sm font-bold text-white">Mass Burning Rate $\dot{m}''$ [g/m²/s] &amp; Surface Temperature $T_s$ [K] vs $g/g_e$</h3>
+            <p class="text-[11px] text-slate-400">Comparison between thermally thin ($\tau = 0.1\text{ mm}$), intermediate ($\tau = 0.6\text{ mm}$) and thick ($\tau = 1.8\text{ mm}$) fuels and the selected thickness $\tau$.</p>
           </div>
           <div id="chart5B" class="w-full h-[370px]" style="width:100%;height:370px;"></div>
         </div>
@@ -772,20 +772,20 @@
                 NASA PSI-41
               </span>
               <span class="text-xs font-mono text-slate-400">PI: David Urban, Gary Ruff, Paul Ferkul, Ya-Ting Liao (NASA GRC)</span>
-              <span class="text-xs font-mono text-sky-400">• Facility: Veicolo Cargo Cygnus (Saffire I–VI • Scala Metrica)</span>
+              <span class="text-xs font-mono text-sky-400">• Facility: Cygnus Cargo Vehicle (Saffire I–VI • Meter Scale)</span>
             </div>
             <h2 class="text-lg sm:text-xl font-bold text-white">
-              Spacecraft Fire Experiment (Saffire I–VI): Scalabilità Geometrica ($L$) &amp; Knowledge Gap Map
+              Spacecraft Fire Experiment (Saffire I–VI): Geometric Scalability ($L$) &amp; Knowledge Gap Map
             </h2>
             <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Le missioni Saffire I–VI a bordo delle navicelle cargo Cygnus hanno colmato il divario tra i test su piccola scala (BASS, cm) e gli incendi reali su scala metrica ($L \approx 0.4–1.0\text{ m}$) nei veicoli spaziali. Ricrea la <strong>Knowledge Gap Map</strong> (Fig. 1 di Thinnakornsutibutr et al., 2025) nel piano $(L, g/g_e)$ con isolinee di Grashof $Gr \propto g L^3$ e confronto tra traiettorie di pirolisi $x_p(t)$ e burnout $x_b(t)$ sulla Terra vs Saffire $0g$.
+              The Saffire I–VI missions aboard Cygnus cargo spacecraft bridged the gap between small-scale tests (BASS, cm) and real meter-scale fires ($L \approx 0.4–1.0\text{ m}$) in spacecraft. Recreates the <strong>Knowledge Gap Map</strong> (Fig. 1 of Thinnakornsutibutr et al., 2025) in the $(L, g/g_e)$ plane with Grashof isolines $Gr \propto g L^3$, and compares pyrolysis $x_p(t)$ and burnout $x_b(t)$ trajectories on Earth vs Saffire $0g$.
             </p>
           </div>
 
           <!-- Controllo Locale Saffire: Scala di Lunghezza Caratteristica L -->
           <div class="bg-[#0b1120] border border-rose-500/40 rounded-xl p-3.5 w-full lg:w-80 space-y-2 shrink-0">
             <div class="flex items-center justify-between">
-              <label for="lengthScaleSlider" class="text-xs font-semibold text-rose-300">Scala Caratteristica Incendio $L$</label>
+              <label for="lengthScaleSlider" class="text-xs font-semibold text-rose-300">Characteristic Fire Scale $L$</label>
               <span id="lengthScaleDisplay" class="font-mono text-xs font-bold text-white">0.40 m (40 cm)</span>
             </div>
             <input id="lengthScaleSlider" type="range" min="0.05" max="1.00" step="0.01" value="0.40" class="nasa-slider" />
@@ -795,8 +795,8 @@
                 <span id="saffireGrVal" class="text-sky-400 font-bold">5.5e+7</span>
               </div>
               <div>
-                <span class="text-slate-400 block text-[10px]">Regime Scala:</span>
-                <span id="saffireRegimeVal" class="text-amber-400 font-bold">Laminare</span>
+                <span class="text-slate-400 block text-[10px]">Scale Regime:</span>
+                <span id="saffireRegimeVal" class="text-amber-400 font-bold">Laminar</span>
               </div>
             </div>
           </div>
@@ -807,18 +807,18 @@
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-rose-400 uppercase">Mappa 6A • Fig. 1 Thinnakornsutibutr et al. (2025)</span>
-            <h3 class="text-sm font-bold text-white">Mappa Gravità vs Scala di Lunghezza ($g/g_e$ vs $L$ [m] Log-Log) &amp; Knowledge Gaps</h3>
-            <p class="text-[11px] text-slate-400">Isolinee $Gr = \text{cost}$ ($Gr \propto g L^3$), transizione turbolenta ($Gr = 10^9$), aree Knowledge Gap e posizione di Candle, BASS, Saffire I–VI, Wood Cribs e Pool Fires.</p>
+            <span class="text-[10px] font-mono text-rose-400 uppercase">Map 6A • Fig. 1 Thinnakornsutibutr et al. (2025)</span>
+            <h3 class="text-sm font-bold text-white">Gravity vs Length Scale Map ($g/g_e$ vs $L$ [m] Log-Log) &amp; Knowledge Gaps</h3>
+            <p class="text-[11px] text-slate-400">Isolines $Gr = \text{const}$ ($Gr \propto g L^3$), turbulent transition ($Gr = 10^9$), Knowledge Gap areas and the positions of Candle, BASS, Saffire I–VI, Wood Cribs and Pool Fires.</p>
           </div>
           <div id="chart6A" class="w-full h-[380px]" style="width:100%;height:380px;"></div>
         </div>
 
         <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
           <div class="mb-2">
-            <span class="text-[10px] font-mono text-sky-400 uppercase">Mappa 6B • Fig. 11 Evoluzione Fronti Pirolisi &amp; Burnout</span>
-            <h3 class="text-sm font-bold text-white">Traiettorie Fronte di Pirolisi $x_p(t)$ e Burnout $x_b(t)$: Terra ($1\,g_e$) vs Saffire ($0\,g_e$)</h3>
-            <p class="text-[11px] text-slate-400">Confronta l'accelerazione esponenziale verso l'alto a $1\,g_e$ con la propagazione stazionaria su scala metrica $L$ in microgravità ($U_\infty$) e al $g/g_e$ attivo.</p>
+            <span class="text-[10px] font-mono text-sky-400 uppercase">Map 6B • Fig. 11 Pyrolysis &amp; Burnout Front Evolution</span>
+            <h3 class="text-sm font-bold text-white">Pyrolysis $x_p(t)$ and Burnout $x_b(t)$ Front Trajectories: Earth ($1\,g_e$) vs Saffire ($0\,g_e$)</h3>
+            <p class="text-[11px] text-slate-400">Compares the exponential upward acceleration at $1\,g_e$ with steady meter-scale spread $L$ in microgravity ($U_\infty$) and at the active $g/g_e$.</p>
           </div>
           <div id="chart6B" class="w-full h-[380px]" style="width:100%;height:380px;"></div>
         </div>
@@ -833,13 +833,13 @@
       <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-5 card-glow flex flex-wrap items-center justify-between gap-4">
         <div class="space-y-1 max-w-3xl">
           <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 font-mono text-xs font-bold text-emerald-300">
-            SINTESI MULTI-MISSIONE NASA PSI
+            NASA PSI MULTI-MISSION SYNTHESIS
           </span>
           <h2 class="text-lg sm:text-xl font-bold text-white">
-            Confronto Globale tra Tutti i 6 Esperimenti NASA PSI &amp; Esportazione Dati
+            Global Comparison of All 6 NASA PSI Experiments &amp; Data Export
           </h2>
           <p class="text-xs sm:text-sm text-slate-300">
-            Analisi comparativa normalizzata delle grandezze chiave di <strong>PSI-117</strong>, <strong>PSI-25</strong>, <strong>PSI-142</strong>, <strong>PSI-164</strong>, <strong>PSI-1/2 (BASS)</strong> e <strong>PSI-41 (Saffire)</strong> da $0.0001\,g_e$ a $2.00\,g_e$.
+            Normalized comparative analysis of the key quantities of <strong>PSI-117</strong>, <strong>PSI-25</strong>, <strong>PSI-142</strong>, <strong>PSI-164</strong>, <strong>PSI-1/2 (BASS)</strong> and <strong>PSI-41 (Saffire)</strong> from $0.0001\,g_e$ to $2.00\,g_e$.
           </p>
         </div>
 
@@ -851,74 +851,74 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
           </svg>
-          <span>Scarica Report CSV Completo (Tutti i 6 Esperimenti PSI)</span>
+          <span>Download Full CSV Report (All 6 PSI Experiments)</span>
         </button>
       </div>
 
       <!-- Grafico 7A: Multi-Experiment Normalized Sensitivity Chart -->
       <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-4 card-glow flex flex-col">
         <div class="mb-2">
-          <span class="text-[10px] font-mono text-emerald-400 uppercase">Grafico 7A • Sensibilità Comparata Multi-Esperimento</span>
-          <h3 class="text-sm font-bold text-white">Risposta Normalizzata dei 6 Esperimenti NASA PSI al Variare di $g/g_e$ ($0.0001 - 2.00\,g_e$)</h3>
-          <p class="text-[11px] text-slate-400">Sovrappone simultaneamente la risposta di ciascuna indagine NASA PSI rispetto al valore di riferimento terrestre ($1\,g_e$).</p>
+          <span class="text-[10px] font-mono text-emerald-400 uppercase">Chart 7A • Comparative Multi-Experiment Sensitivity</span>
+          <h3 class="text-sm font-bold text-white">Normalized Response of the 6 NASA PSI Experiments as $g/g_e$ Varies ($0.0001 - 2.00\,g_e$)</h3>
+          <p class="text-[11px] text-slate-400">Overlays the response of each NASA PSI investigation relative to the Earth reference value ($1\,g_e$).</p>
         </div>
         <div id="chart7A" class="w-full h-[400px]" style="width:100%;height:400px;"></div>
       </div>
 
       <!-- Tabella Riepilogativa Completa dei 6 Esperimenti NASA PSI -->
       <div class="bg-[#111827] border border-[#1e293b] rounded-2xl p-5 card-glow overflow-hidden">
-        <h3 class="text-base font-bold text-white mb-3">Matrice Comparativa NASA PSI &amp; Telemetria Live al tuo $g/g_e$ (<span id="tableCurrentG" class="font-mono text-sky-400">1.0000 g_e</span>)</h3>
+        <h3 class="text-base font-bold text-white mb-3">NASA PSI Comparison Matrix &amp; Live Telemetry at your $g/g_e$ (<span id="tableCurrentG" class="font-mono text-sky-400">1.0000 g_e</span>)</h3>
         <div class="overflow-x-auto border border-[#1e293b] rounded-xl">
           <table class="w-full text-left text-xs">
             <thead class="bg-[#0b1120] text-slate-400 font-mono uppercase border-b border-[#1e293b]">
               <tr>
-                <th class="px-3 py-2.5">Codice PSI</th>
-                <th class="px-3 py-2.5">Esperimento &amp; Facility</th>
-                <th class="px-3 py-2.5">Meccanismo Fisico Dominante</th>
-                <th class="px-3 py-2.5">Leggi di Scala</th>
-                <th class="px-3 py-2.5 text-right">Valore Live Attuale</th>
+                <th class="px-3 py-2.5">PSI Code</th>
+                <th class="px-3 py-2.5">Experiment &amp; Facility</th>
+                <th class="px-3 py-2.5">Dominant Physical Mechanism</th>
+                <th class="px-3 py-2.5">Scaling Laws</th>
+                <th class="px-3 py-2.5 text-right">Current Live Value</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-[#1e293b] text-slate-200">
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-sky-400">PSI-117</td>
                 <td class="px-3 py-2.5"><strong>Upward Flame Spread</strong><br/><span class="text-[11px] text-slate-400">CWRU / NASA GRC (CFD &amp; Drop Tower)</span></td>
-                <td class="px-3 py-2.5">Convezione naturale ascendente su solido sottile SIBAL</td>
+                <td class="px-3 py-2.5">Rising natural convection over thin SIBAL solid</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$\delta \propto p^{-0.5}g^{-0.25}$; $V_f \propto p^{1.8}g$</td>
                 <td id="tblVal117" class="px-3 py-2.5 text-right font-mono font-bold text-sky-300">V_f = 3.00 cm/s | δ_f = 4.2 mm</td>
               </tr>
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-amber-400">PSI-25</td>
                 <td class="px-3 py-2.5"><strong>Confined Combustion</strong><br/><span class="text-[11px] text-slate-400">ISS Microgravity Science Glovebox</span></td>
-                <td class="px-3 py-2.5">Interazione $\delta_f$ con pareti $H_{\text{duct}}$: espansione vs quenching</td>
+                <td class="px-3 py-2.5">$\delta_f$ interaction with $H_{\text{duct}}$ walls: expansion vs quenching</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$\delta_f / H_{\text{duct}} \propto g^{-0.25} H^{-1}$</td>
                 <td id="tblVal25" class="px-3 py-2.5 text-right font-mono font-bold text-amber-300">Accel = 1.02× | δ_f/H = 0.07</td>
               </tr>
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-purple-400">PSI-142</td>
                 <td class="px-3 py-2.5"><strong>Cool Flame Transitions</strong><br/><span class="text-[11px] text-slate-400">ISS FLEX / Princeton Counterflow</span></td>
-                <td class="px-3 py-2.5">Estinzione radiativa Hot Flame → Cool Flame NTC ($\text{CH}_2\text{O}$)</td>
+                <td class="px-3 py-2.5">Radiative extinction Hot Flame → NTC Cool Flame ($\text{CH}_2\text{O}$)</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$Da \propto g^{-0.48}$; $\text{RO}_2 \to \text{QOOH}$</td>
                 <td id="tblVal142" class="px-3 py-2.5 text-right font-mono font-bold text-purple-300">T_f = 1810 K (Hot Flame)</td>
               </tr>
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-emerald-400">PSI-164</td>
                 <td class="px-3 py-2.5"><strong>Multistage n-Alkanes</strong><br/><span class="text-[11px] text-slate-400">Princeton High-Pressure Burner</span></td>
-                <td class="px-3 py-2.5">Cinetica LTC/ITC multistadio, Radical Index e $[O_2]^n$</td>
+                <td class="px-3 py-2.5">Multistage LTC/ITC kinetics, Radical Index and $[O_2]^n$</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$I_{\text{LTC}} \propto [O_2]^n \cdot p^{1.2} \cdot Da$</td>
-                <td id="tblVal164" class="px-3 py-2.5 text-right font-mono font-bold text-emerald-300">Rad. Index = 1.24 (n-Decano)</td>
+                <td id="tblVal164" class="px-3 py-2.5 text-right font-mono font-bold text-emerald-300">Rad. Index = 1.24 (n-Decane)</td>
               </tr>
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-cyan-400">PSI-1 / PSI-2</td>
                 <td class="px-3 py-2.5"><strong>BASS &amp; BASS-II</strong><br/><span class="text-[11px] text-slate-400">ISS MSG Solid Suppression</span></td>
-                <td class="px-3 py-2.5">Abbassamento MOI in ventilazione $\mu g$ &amp; inerzia $\rho_s c_s \tau$</td>
+                <td class="px-3 py-2.5">MOI reduction under $\mu g$ ventilation &amp; inertia $\rho_s c_s \tau$</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$\dot{m}'' = \dot{q}''_{\text{net}} / L_v$; $\text{MOI}(g, U_\infty)$</td>
                 <td id="tblValBass" class="px-3 py-2.5 text-right font-mono font-bold text-cyan-300">MOI = 18.1% | m'' = 1.85 g/m²/s</td>
               </tr>
               <tr class="hover:bg-slate-800/40">
                 <td class="px-3 py-2.5 font-mono font-bold text-rose-400">PSI-41</td>
                 <td class="px-3 py-2.5"><strong>Saffire I–VI</strong><br/><span class="text-[11px] text-slate-400">Cygnus Spacecraft Fire Safety</span></td>
-                <td class="px-3 py-2.5">Scalabilità su scala metrica $L$ e transizione $Gr$</td>
+                <td class="px-3 py-2.5">Meter-scale scalability $L$ and $Gr$ transition</td>
                 <td class="px-3 py-2.5 font-mono text-[11px]">$Gr = g\beta\Delta T L^3 / \nu^2 \propto g L^3$</td>
                 <td id="tblValSaffire" class="px-3 py-2.5 text-right font-mono font-bold text-rose-300">Gr = 5.5e+7 (L = 0.40 m)</td>
               </tr>
@@ -957,11 +957,11 @@
       const DELTA_F_REF = 4.20;// mm
 
       const FUEL_DB_164 = {
-        DME: { label: 'DME (Dimetiletere)', chainReact: 0.92, expN: 1.55, pIgnBase: 32 },
-        C7:  { label: 'n-Eptano (C₇H₁₆)', chainReact: 1.00, expN: 1.70, pIgnBase: 36 },
-        C8:  { label: 'n-Ottano (C₈H₁₈)', chainReact: 1.12, expN: 1.76, pIgnBase: 34 },
-        C10: { label: 'n-Decano (C₁₀H₂₂)', chainReact: 1.25, expN: 1.82, pIgnBase: 31 },
-        C12: { label: 'n-Dodecano (C₁₂H₂₆)', chainReact: 1.38, expN: 1.90, pIgnBase: 28 }
+        DME: { label: 'DME (Dimethyl ether)', chainReact: 0.92, expN: 1.55, pIgnBase: 32 },
+        C7:  { label: 'n-Heptane (C₇H₁₆)', chainReact: 1.00, expN: 1.70, pIgnBase: 36 },
+        C8:  { label: 'n-Octane (C₈H₁₈)', chainReact: 1.12, expN: 1.76, pIgnBase: 34 },
+        C10: { label: 'n-Decane (C₁₀H₂₂)', chainReact: 1.25, expN: 1.82, pIgnBase: 31 },
+        C12: { label: 'n-Dodecane (C₁₂H₂₆)', chainReact: 1.38, expN: 1.90, pIgnBase: 28 }
       };
 
       const state = {
@@ -1075,9 +1075,9 @@
         const ho2Rel = Math.max(0.04, Math.min(1.05, (1 - 0.78 * hotWeight) * (0.68 + 0.30 * o3Factor) + 0.22 * ntcPeak));
 
         let regime142 = 'HOT FLAME (OH)';
-        if (tFlame < 480) regime142 = 'ESTINTA / BLOW-OFF';
+        if (tFlame < 480) regime142 = 'EXTINGUISHED / BLOW-OFF';
         else if (tFlame < 800) regime142 = 'COOL FLAME (NTC)';
-        else if (tFlame <= 1160) regime142 = 'WARM FLAME (Multistadio)';
+        else if (tFlame <= 1160) regime142 = 'WARM FLAME (Multistage)';
 
         // -----------------------------------------------------------------------
         // 4. PSI-164: Multistage n-Alkane & High-Pressure Kinetics
@@ -1110,21 +1110,21 @@
         // Grashof scalato con lunghezza caratteristica L [m]: Gr ~ p^2 * g * L^3
         const lRatio = lengthM / 0.20; // rispetto al campione 20 cm di PSI-117
         const grSaffire = 6.9e6 * Math.pow(pRatio, 2) * gSafe * Math.pow(lRatio, 3);
-        const saffireRegime = grSaffire > 1e9 ? 'Turbolento (Gr > 10⁹)' : (grSaffire < 1e4 ? 'Diffusivo (µg)' : 'Laminare');
+        const saffireRegime = grSaffire > 1e9 ? 'Turbulent (Gr > 10⁹)' : (grSaffire < 1e4 ? 'Diffusive (µg)' : 'Laminar');
 
         // -----------------------------------------------------------------------
         // Regime Convettivo Globale (Header Badge)
         // -----------------------------------------------------------------------
-        let globalRegime = 'Dominato da Galleggiamento';
+        let globalRegime = 'Buoyancy Dominated';
         let globalRegimeStyle = 'bg-red-500/15 border-red-500/40 text-red-300';
         if (gSafe < 0.02) {
-          globalRegime = 'Diffusivo / Microgravità';
+          globalRegime = 'Diffusive / Microgravity';
           globalRegimeStyle = 'bg-sky-500/15 border-sky-500/40 text-sky-300';
         } else if (gSafe < 0.65) {
-          globalRegime = 'Gravità Parziale (Planetaria)';
+          globalRegime = 'Partial Gravity (Planetary)';
           globalRegimeStyle = 'bg-amber-500/15 border-amber-500/40 text-amber-300';
         } else if (gSafe > 1.35 || grSaffire > 1e9) {
-          globalRegime = 'Turbolento / Ipergravità';
+          globalRegime = 'Turbulent / Hypergravity';
           globalRegimeStyle = 'bg-purple-500/15 border-purple-500/40 text-purple-300';
         }
 
@@ -1228,7 +1228,7 @@
         xaxis: {
           gridcolor: '#1e293b',
           zerolinecolor: '#334155',
-          title: { text: 'Gravità Relativa g / g_e', font: { size: 11, color: '#94a3b8' } }
+          title: { text: 'Relative Gravity g / g_e', font: { size: 11, color: '#94a3b8' } }
         },
         yaxis: {
           gridcolor: '#1e293b',
@@ -1515,9 +1515,34 @@
         };
       }
 
+      // Evita sovrapposizioni di testo: barra strumenti Plotly nascosta (copriva grafico e legenda),
+      // legenda con margine superiore riservato e annotazioni con sfondo leggibile sopra le curve.
+      function polishLayout(layout, traces) {
+        const out = { ...layout };
+        // Legenda a colonne di larghezza fissa (frazione dell'area del grafico): le voci lunghe non si
+        // accavallano e non escono dal bordo destro.
+        const names = (traces || []).filter(t => t.showlegend !== false && t.name).map(t => t.name);
+        const longest = names.reduce((m, n) => Math.max(m, n.length), 0);
+        const cols = longest > 30 ? 2 : 3;
+        out.legend = { ...baseLayout.legend, ...(layout.legend || {}), tracegroupgap: 4,
+                       entrywidthmode: 'fraction', entrywidth: 1 / cols - 0.005 };
+        out.margin = { ...(layout.margin || baseLayout.margin), t: 24, pad: 2 };
+        out.xaxis = { ...(layout.xaxis || {}), automargin: true };
+        out.yaxis = { ...(layout.yaxis || {}), automargin: true };
+        if (layout.yaxis2) out.yaxis2 = { ...layout.yaxis2, automargin: true };
+        if (layout.annotations) {
+          out.annotations = layout.annotations.map(a => ({
+            bgcolor: 'rgba(11, 17, 32, 0.82)', borderpad: 3, ...a
+          }));
+        }
+        return out;
+      }
+
       function renderPlotSafe(divId, traces, layout, config) {
         const divEl = document.getElementById(divId);
         if (!divEl) return;
+        layout = polishLayout(layout, traces);
+        config = { ...config, displayModeBar: false };
         chartRegistry[divId] = { traces, layout, config };
 
         if (typeof window.Plotly !== 'undefined' && typeof window.Plotly.react === 'function') {
@@ -1570,40 +1595,40 @@
           ], {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 4.2], title: { text: 'Rapporto Adimensionale (X / X₀)', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 4.2], title: { text: 'Dimensionless Ratio (X / X₀)', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
 
           renderPlotSafe('chart1B', [
-            { x: gLin, y: series.map(d => d.vfEmpirical), name: 'Empirico V_f = 0.000585·p¹·⁸g', mode: 'lines', line: { color: '#10b981', width: 3 } },
-            { x: gLin, y: series.map(d => d.vfTheoretical), name: 'Teoria Strato Limite (p²g)⁰·²⁵', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
+            { x: gLin, y: series.map(d => d.vfEmpirical), name: 'Empirical V_f = 0.000585·p¹·⁸g', mode: 'lines', line: { color: '#10b981', width: 3 } },
+            { x: gLin, y: series.map(d => d.vfTheoretical), name: 'Boundary Layer Theory (p²g)⁰·²⁵', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
             { x: [1.00, 0.399, 0.36, 0.192, 0.16], y: [3.00, 1.82, 1.72, 1.18, 1.05], name: 'Thinnakornsutibutr (2025) CFD', mode: 'markers', marker: { color: '#38bdf8', size: 8, symbol: 'triangle-up' } },
-            { x: [1.00, 0.58, 0.38, 0.29, 0.16, 0.08], y: [2.95, 2.22, 1.68, 1.43, 1.15, 0.78], name: 'Kleinhenz (2008) Voli Parabolici', mode: 'markers', marker: { color: '#ef4444', size: 7, symbol: 'square' } },
+            { x: [1.00, 0.58, 0.38, 0.29, 0.16, 0.08], y: [2.95, 2.22, 1.68, 1.43, 1.15, 0.78], name: 'Kleinhenz (2008) Parabolic Flights', mode: 'markers', marker: { color: '#ef4444', size: 7, symbol: 'square' } },
             { x: [1.00, 0.53, 0.29, 0.19, 0.11], y: [3.02, 2.26, 1.58, 1.42, 1.05], name: 'Thomsen (2019) / Carmignani (2022)', mode: 'markers', marker: { color: '#a855f7', size: 7, symbol: 'diamond' } },
             { x: [1.00, 0.66, 0.29, 0.08], y: [3.00, 2.31, 2.01, 0.73], name: 'Neupane & Liao (2024)', mode: 'markers', marker: { color: '#22d3ee', size: 7, symbol: 'circle' } },
             { x: [cur.gRel], y: [cur.vfEmpirical], mode: 'markers', showlegend: false, marker: { color: '#10b981', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 4.6], title: { text: 'Velocità Propagazione V_f [cm/s]', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 4.6], title: { text: 'Flame Spread Rate V_f [cm/s]', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
 
           renderPlotSafe('chart1C', [
-            { x: gLin, y: series.map(d => d.qConv), name: "Convettivo q''_fc", mode: 'lines', line: { color: '#ef4444', width: 2.6 } },
-            { x: gLin, y: series.map(d => d.qRadInc), name: "Radiativo Incidente q''_fr (g⁰)", mode: 'lines', line: { color: '#a855f7', width: 2.2, dash: 'dot' } },
-            { x: gLin, y: series.map(d => d.qRadLoss), name: "Perdita Superficiale q''_rs (-εσT_s⁴)", mode: 'lines', line: { color: '#38bdf8', width: 2.4, dash: 'dash' } },
-            { x: gLin, y: series.map(d => d.qNet), name: "Flusso Netto q''_net", mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(245,158,11,0.12)', line: { color: '#f59e0b', width: 3.2 } },
+            { x: gLin, y: series.map(d => d.qConv), name: "Convective q''_fc", mode: 'lines', line: { color: '#ef4444', width: 2.6 } },
+            { x: gLin, y: series.map(d => d.qRadInc), name: "Incident Radiation q''_fr (g⁰)", mode: 'lines', line: { color: '#a855f7', width: 2.2, dash: 'dot' } },
+            { x: gLin, y: series.map(d => d.qRadLoss), name: "Surface Loss q''_rs (-εσT_s⁴)", mode: 'lines', line: { color: '#38bdf8', width: 2.4, dash: 'dash' } },
+            { x: gLin, y: series.map(d => d.qNet), name: "Net Flux q''_net", mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(245,158,11,0.12)', line: { color: '#f59e0b', width: 3.2 } },
             { x: [cur.gRel], y: [cur.qNet], mode: 'markers', showlegend: false, marker: { color: '#f59e0b', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [-20000, 34000], title: { text: "Flusso Termico Superficiale q'' [W/m²]", font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [-20000, 34000], title: { text: "Surface Heat Flux q'' [W/m²]", font: { size: 11, color: '#94a3b8' } } },
             shapes: [
               { type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: -20000, y1: 0, fillcolor: 'rgba(239,68,68,0.09)', line: { width: 0 } },
               vLine(cur.gRel)
             ],
-            annotations: [{ x: 1.52, y: -17200, text: "Zona Estinzione Radiativa (q''_net ≤ 0)", showarrow: false, font: { size: 10, color: '#f87171', family: 'JetBrains Mono' } }]
+            annotations: [{ x: 1.52, y: -6500, text: "Radiative Extinction Zone (q''_net ≤ 0)", showarrow: false, font: { size: 10, color: '#f87171', family: 'JetBrains Mono' } }]
           }, plotCfg);
         }
 
@@ -1617,18 +1642,18 @@
           const sUser   = gLin.map(g => computeAllPsiPhysics(g, state.pressure, state.uInf, state.ozonePpm, { hDuctCm: state.hDuctCm }));
 
           renderPlotSafe('chart2A', [
-            { x: gLin, y: sNarrow.map(d => d.accelRatio25), name: 'Stretto (H = 2.0 cm)', mode: 'lines', line: { color: '#ef4444', width: 2.2, dash: 'dot' } },
-            { x: gLin, y: sMedium.map(d => d.accelRatio25), name: 'Medio (H = 4.0 cm)', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
-            { x: gLin, y: sWide.map(d => d.accelRatio25), name: 'Largo (H = 6.25 cm)', mode: 'lines', line: { color: '#10b981', width: 2.2 } },
-            { x: gLin, y: sUser.map(d => d.accelRatio25), name: `Attivo (H = ${state.hDuctCm.toFixed(2)} cm)`, mode: 'lines', line: { color: '#38bdf8', width: 3.2 } },
-            { x: gLin, y: sUser.map(d => d.confRatio), name: 'Rapporto δ_f / H_duct', mode: 'lines', yaxis: 'y2', line: { color: '#a855f7', width: 2, dash: 'dashdot' } },
+            { x: gLin, y: sNarrow.map(d => d.accelRatio25), name: 'Narrow (H = 2.0 cm)', mode: 'lines', line: { color: '#ef4444', width: 2.2, dash: 'dot' } },
+            { x: gLin, y: sMedium.map(d => d.accelRatio25), name: 'Medium (H = 4.0 cm)', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
+            { x: gLin, y: sWide.map(d => d.accelRatio25), name: 'Wide (H = 6.25 cm)', mode: 'lines', line: { color: '#10b981', width: 2.2 } },
+            { x: gLin, y: sUser.map(d => d.accelRatio25), name: `Active (H = ${state.hDuctCm.toFixed(2)} cm)`, mode: 'lines', line: { color: '#38bdf8', width: 3.2 } },
+            { x: gLin, y: sUser.map(d => d.confRatio), name: 'Ratio δ_f / H_duct', mode: 'lines', yaxis: 'y2', line: { color: '#a855f7', width: 2, dash: 'dashdot' } },
             { x: [cur.gRel], y: [cur.accelRatio25], mode: 'markers', showlegend: false, marker: { color: '#38bdf8', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
             margin: { l: 54, r: 50, t: 16, b: 42 },
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 1.85], title: { text: 'Accelerazione V_f,conf / V_f,open', font: { size: 11, color: '#38bdf8' } } },
-            yaxis2: { title: { text: 'Confinamento δ_f / H_duct', font: { size: 11, color: '#a855f7' } }, overlaying: 'y', side: 'right', range: [0, 1.4], gridcolor: 'rgba(0,0,0,0)' },
+            yaxis: { ...baseLayout.yaxis, range: [0, 1.85], title: { text: 'Acceleration V_f,conf / V_f,open', font: { size: 11, color: '#38bdf8' } } },
+            yaxis2: { title: { text: 'Confinement δ_f / H_duct', font: { size: 11, color: '#a855f7' } }, overlaying: 'y', side: 'right', range: [0, 1.4], gridcolor: 'rgba(0,0,0,0)' },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
 
@@ -1639,35 +1664,35 @@
 
           renderPlotSafe('chart2B', [
             {
-              x: gLog, y: uQuench, name: 'Limite Quenching Conduttivo (Pareti)',
+              x: gLog, y: uQuench, name: 'Conductive Quenching Limit (Walls)',
               mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(239, 68, 68, 0.20)',
               line: { color: '#ef4444', width: 2.5 }
             },
             {
-              x: gLog, y: uAccelUpper, name: 'Zona Accelerazione Espansione & Riflessione',
+              x: gLog, y: uAccelUpper, name: 'Expansion & Reflection Acceleration Zone',
               mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(245, 158, 11, 0.16)',
               line: { color: '#f59e0b', width: 2.4, dash: 'dash' }
             },
             {
-              x: gLog, y: uBlowOff, name: 'Limite Blow-Off (Alta Velocità)',
+              x: gLog, y: uBlowOff, name: 'Blow-Off Limit (High Velocity)',
               mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(16, 185, 129, 0.12)',
               line: { color: '#a855f7', width: 2.5 }
             },
             {
-              x: [cur.gRel], y: [cur.uInfCmS], name: 'Punto Operativo (g/g_e, U_∞)',
+              x: [cur.gRel], y: [cur.uInfCmS], name: 'Operating Point (g/g_e, U_∞)',
               mode: 'markers', marker: { color: '#38bdf8', size: 14, symbol: 'star', line: { color: '#ffffff', width: 1.8 } }
             }
           ], {
             ...baseLayout,
             hovermode: 'closest',
-            xaxis: { ...baseLayout.xaxis, type: 'log', range: [-4.05, 0.35], title: { text: 'Gravità Relativa g / g_e (Scala Logaritmica)', font: { size: 11, color: '#94a3b8' } } },
-            yaxis: { ...baseLayout.yaxis, range: [0, 41], title: { text: 'Velocità Flusso Forzato U_∞ [cm/s]', font: { size: 11, color: '#94a3b8' } } },
+            xaxis: { ...baseLayout.xaxis, type: 'log', range: [-4.05, 0.35], title: { text: 'Relative Gravity g / g_e (Log Scale)', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 41], title: { text: 'Forced Flow Velocity U_∞ [cm/s]', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)],
             annotations: [
-              { x: -3.2, y: 2.5, text: 'QUENCHING CONDUTTIVO', showarrow: false, font: { size: 10, color: '#f87171', family: 'JetBrains Mono' } },
-              { x: -2.5, y: 15, text: 'ACCELERAZIONE RIFLESSIONE RADIATIVA', showarrow: false, font: { size: 10, color: '#fbbf24', family: 'JetBrains Mono' } },
-              { x: -0.2, y: 16, text: 'PROPAGAZIONE STABILE', showarrow: false, font: { size: 10, color: '#34d399', family: 'JetBrains Mono' } },
-              { x: -1.5, y: 37, text: 'ZONA DI BLOW-OFF', showarrow: false, font: { size: 10, color: '#c084fc', family: 'JetBrains Mono' } }
+              { x: -3.2, y: 2.5, text: 'CONDUCTIVE QUENCHING', showarrow: false, font: { size: 10, color: '#f87171', family: 'JetBrains Mono' } },
+              { x: -2.5, y: 15, text: 'RADIATIVE REFLECTION ACCELERATION', showarrow: false, font: { size: 10, color: '#fbbf24', family: 'JetBrains Mono' } },
+              { x: -0.2, y: 16, text: 'STABLE SPREAD', showarrow: false, font: { size: 10, color: '#34d399', family: 'JetBrains Mono' } },
+              { x: -1.5, y: 37, text: 'BLOW-OFF ZONE', showarrow: false, font: { size: 10, color: '#c084fc', family: 'JetBrains Mono' } }
             ]
           }, plotCfg);
         }
@@ -1680,10 +1705,10 @@
           const seriesNoO3 = gLin.map(g => computeAllPsiPhysics(g, state.pressure, state.uInf, 0));
 
           renderPlotSafe('chart3A', [
-            { x: gLin, y: series.map(d => d.hfeLimit), name: 'Limite Estinzione Hot Flame (HFE)', mode: 'lines', line: { color: '#ef4444', width: 2.8 } },
-            { x: gLin, y: series.map(d => d.cfeUpperLimit), name: `Isola Cool Flame CFE (con O₃ = ${state.ozonePpm} ppm)`, mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(56,189,248,0.12)', line: { color: '#38bdf8', width: 2.8 } },
-            { x: gLin, y: seriesNoO3.map(d => d.cfeUpperLimit), name: 'CFE Senza O₃ (0 ppm)', mode: 'lines', line: { color: '#94a3b8', width: 1.8, dash: 'dot' } },
-            { x: gLin, y: series.map(d => d.cfeLowerRadLimit), name: 'Limite Estinzione Radiativa Inferiore', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
+            { x: gLin, y: series.map(d => d.hfeLimit), name: 'Hot Flame Extinction Limit (HFE)', mode: 'lines', line: { color: '#ef4444', width: 2.8 } },
+            { x: gLin, y: series.map(d => d.cfeUpperLimit), name: `Cool Flame CFE Island (with O₃ = ${state.ozonePpm} ppm)`, mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(56,189,248,0.12)', line: { color: '#38bdf8', width: 2.8 } },
+            { x: gLin, y: seriesNoO3.map(d => d.cfeUpperLimit), name: 'CFE Without O₃ (0 ppm)', mode: 'lines', line: { color: '#94a3b8', width: 1.8, dash: 'dot' } },
+            { x: gLin, y: series.map(d => d.cfeLowerRadLimit), name: 'Lower Radiative Extinction Limit', mode: 'lines', line: { color: '#f59e0b', width: 2.2, dash: 'dash' } },
             {
               x: [0.0001, 0.015, 0.16, 1.00],
               y: [22, 48, 82, 138],
@@ -1692,26 +1717,26 @@
               mode: 'markers',
               marker: { color: '#a855f7', size: 10, symbol: 'diamond', line: { color: '#fff', width: 1.5 } }
             },
-            { x: [cur.gRel], y: [cur.strainAlpha], name: 'Strain Rate Attivo α', mode: 'markers', marker: { color: '#10b981', size: 12, symbol: 'star' } }
+            { x: [cur.gRel], y: [cur.strainAlpha], name: 'Active Strain Rate α', mode: 'markers', marker: { color: '#10b981', size: 12, symbol: 'star' } }
           ], {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 195], title: { text: 'Strain Rate Estinzione α [s⁻¹]', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 195], title: { text: 'Extinction Strain Rate α [s⁻¹]', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
 
           renderPlotSafe('chart3B', [
-            { x: gLin, y: series.map(d => d.tFlame), name: 'Temp. Fiamma T_f [K]', mode: 'lines', yaxis: 'y1', line: { color: '#fb923c', width: 3.2 } },
-            { x: gLin, y: series.map(d => d.ohRel), name: 'Radicale OH (High-T)', mode: 'lines', yaxis: 'y2', line: { color: '#f43f5e', width: 2.2, dash: 'dash' } },
+            { x: gLin, y: series.map(d => d.tFlame), name: 'Flame Temp. T_f [K]', mode: 'lines', yaxis: 'y1', line: { color: '#fb923c', width: 3.2 } },
+            { x: gLin, y: series.map(d => d.ohRel), name: 'OH Radical (High-T)', mode: 'lines', yaxis: 'y2', line: { color: '#f43f5e', width: 2.2, dash: 'dash' } },
             { x: gLin, y: series.map(d => d.ch2oRel), name: 'CH₂O (PLIF 355 nm • Data ID 5)', mode: 'lines', yaxis: 'y2', line: { color: '#38bdf8', width: 2.6 } },
-            { x: gLin, y: series.map(d => d.ho2Rel), name: 'HO₂ / H₂O₂ (Regime NTC)', mode: 'lines', yaxis: 'y2', line: { color: '#10b981', width: 2.2, dash: 'dot' } },
+            { x: gLin, y: series.map(d => d.ho2Rel), name: 'HO₂ / H₂O₂ (NTC Regime)', mode: 'lines', yaxis: 'y2', line: { color: '#10b981', width: 2.2, dash: 'dot' } },
             { x: [cur.gRel], y: [cur.tFlame], mode: 'markers', yaxis: 'y1', showlegend: false, marker: { color: '#fb923c', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
             margin: { l: 54, r: 50, t: 16, b: 42 },
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [300, 2050], title: { text: 'Temperatura Fiamma T_f [K]', font: { size: 11, color: '#fb923c' } } },
-            yaxis2: { title: { text: 'Specie Radicaliche [a.u.]', font: { size: 11, color: '#38bdf8' } }, overlaying: 'y', side: 'right', range: [0, 1.18], gridcolor: 'rgba(0,0,0,0)' },
+            yaxis: { ...baseLayout.yaxis, range: [300, 2050], title: { text: 'Flame Temperature T_f [K]', font: { size: 11, color: '#fb923c' } } },
+            yaxis2: { title: { text: 'Radical Species [a.u.]', font: { size: 11, color: '#38bdf8' } }, overlaying: 'y', side: 'right', range: [0, 1.18], gridcolor: 'rgba(0,0,0,0)' },
             shapes: [
               { type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: 500, y1: 800, fillcolor: 'rgba(56,189,248,0.10)', line: { width: 0 } },
               { type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: 800, y1: 1150, fillcolor: 'rgba(245,158,11,0.09)', line: { width: 0 } },
@@ -1748,7 +1773,7 @@
           renderPlotSafe('chart4A', traces4A, {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 5.2], title: { text: 'Radical Index & Reattività LTC [a.u.]', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 5.2], title: { text: 'Radical Index & LTC Reactivity [a.u.]', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
 
@@ -1760,15 +1785,15 @@
           const pHotThresh = gLin.map(g => Math.min(100, pDoubleThresh[gLin.indexOf(g)] + 22 * Math.pow(g + 0.15, 0.18)));
 
           renderPlotSafe('chart4B', [
-            { x: gLin, y: pCoolThresh, name: 'Soglia Cool Flame (LTC)', mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(100,116,139,0.22)', line: { color: '#94a3b8', width: 2.2 } },
-            { x: gLin, y: pDoubleThresh, name: 'Soglia Transient Double Flame', mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(56,189,248,0.16)', line: { color: '#38bdf8', width: 2.4 } },
-            { x: gLin, y: pHotThresh, name: 'Soglia Hot Flame Sostenuta', mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(245,158,11,0.16)', line: { color: '#f59e0b', width: 2.6 } },
-            { x: [cur.gRel], y: [cur.pKpa], name: 'Stato Attivo (g/g_e, p)', mode: 'markers', marker: { color: '#ef4444', size: 13, symbol: 'star', line: { color: '#fff', width: 1.5 } } }
+            { x: gLin, y: pCoolThresh, name: 'Cool Flame Threshold (LTC)', mode: 'lines', fill: 'tozeroy', fillcolor: 'rgba(100,116,139,0.22)', line: { color: '#94a3b8', width: 2.2 } },
+            { x: gLin, y: pDoubleThresh, name: 'Transient Double Flame Threshold', mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(56,189,248,0.16)', line: { color: '#38bdf8', width: 2.4 } },
+            { x: gLin, y: pHotThresh, name: 'Sustained Hot Flame Threshold', mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(245,158,11,0.16)', line: { color: '#f59e0b', width: 2.6 } },
+            { x: [cur.gRel], y: [cur.pKpa], name: 'Active State (g/g_e, p)', mode: 'markers', marker: { color: '#ef4444', size: 13, symbol: 'star', line: { color: '#fff', width: 1.5 } } }
           ], {
             ...baseLayout,
             hovermode: 'closest',
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [25, 102], title: { text: 'Pressione Ambientale p [kPa]', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [25, 102], title: { text: 'Ambient Pressure p [kPa]', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)],
             annotations: [
               { x: 1.4, y: 31, text: 'NO IGNITION / QUENCHED', showarrow: false, font: { size: 9.5, color: '#94a3b8', family: 'JetBrains Mono' } },
@@ -1789,10 +1814,10 @@
           const sActive = gLin.map(g => computeAllPsiPhysics(g, state.pressure, state.uInf, state.ozonePpm));
 
           renderPlotSafe('chart5A', [
-            { x: gLin, y: sActive.map(d => d.moiPercent), name: `MOI Attivo (U_∞ = ${state.uInf} cm/s, τ = ${state.tauMmBass} mm)`, mode: 'lines', line: { color: '#38bdf8', width: 3.2 } },
-            { x: gLin, y: sVent10.map(d => d.moiPercent), name: 'ISS Ventilazione Nominale (10 cm/s)', mode: 'lines', line: { color: '#10b981', width: 2, dash: 'dash' } },
-            { x: gLin, y: sQuiesc.map(d => d.moiPercent), name: 'Quiescente (U_∞ = 0 cm/s • Quenching Rad.)', mode: 'lines', line: { color: '#ef4444', width: 2, dash: 'dot' } },
-            { x: [0.0001, 0.16, 1.00], y: [15.4, 16.9, 18.2], name: 'Dati Sperimentali BASS / BASS-II', mode: 'markers', marker: { color: '#f59e0b', size: 9, symbol: 'diamond' } },
+            { x: gLin, y: sActive.map(d => d.moiPercent), name: `Active MOI (U_∞ = ${state.uInf} cm/s, τ = ${state.tauMmBass} mm)`, mode: 'lines', line: { color: '#38bdf8', width: 3.2 } },
+            { x: gLin, y: sVent10.map(d => d.moiPercent), name: 'ISS Nominal Ventilation (10 cm/s)', mode: 'lines', line: { color: '#10b981', width: 2, dash: 'dash' } },
+            { x: gLin, y: sQuiesc.map(d => d.moiPercent), name: 'Quiescent (U_∞ = 0 cm/s • Rad. Quenching)', mode: 'lines', line: { color: '#ef4444', width: 2, dash: 'dot' } },
+            { x: [0.0001, 0.16, 1.00], y: [15.4, 16.9, 18.2], name: 'BASS / BASS-II Experimental Data', mode: 'markers', marker: { color: '#f59e0b', size: 9, symbol: 'diamond' } },
             { x: [cur.gRel], y: [cur.moiPercent], mode: 'markers', showlegend: false, marker: { color: '#38bdf8', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
@@ -1809,17 +1834,17 @@
           const sThick= gLin.map(g => computeAllPsiPhysics(g, state.pressure, state.uInf, state.ozonePpm, { tauMmBass: 1.80 }));
 
           renderPlotSafe('chart5B', [
-            { x: gLin, y: sActive.map(d => d.mDotSolid), name: `m'' Attivo (τ = ${state.tauMmBass.toFixed(2)} mm)`, mode: 'lines', yaxis: 'y1', line: { color: '#10b981', width: 3.2 } },
-            { x: gLin, y: sThin.map(d => d.mDotSolid), name: "m'' Sottile (0.10 mm)", mode: 'lines', yaxis: 'y1', line: { color: '#38bdf8', width: 1.8, dash: 'dot' } },
-            { x: gLin, y: sThick.map(d => d.mDotSolid), name: "m'' Spesso (1.80 mm)", mode: 'lines', yaxis: 'y1', line: { color: '#a855f7', width: 1.8, dash: 'dash' } },
-            { x: gLin, y: sActive.map(d => d.tSurfBass), name: 'Temp. Superficie Solido T_s [K]', mode: 'lines', yaxis: 'y2', line: { color: '#f59e0b', width: 2.4 } },
+            { x: gLin, y: sActive.map(d => d.mDotSolid), name: `Active m'' (τ = ${state.tauMmBass.toFixed(2)} mm)`, mode: 'lines', yaxis: 'y1', line: { color: '#10b981', width: 3.2 } },
+            { x: gLin, y: sThin.map(d => d.mDotSolid), name: "Thin m'' (0.10 mm)", mode: 'lines', yaxis: 'y1', line: { color: '#38bdf8', width: 1.8, dash: 'dot' } },
+            { x: gLin, y: sThick.map(d => d.mDotSolid), name: "Thick m'' (1.80 mm)", mode: 'lines', yaxis: 'y1', line: { color: '#a855f7', width: 1.8, dash: 'dash' } },
+            { x: gLin, y: sActive.map(d => d.tSurfBass), name: 'Solid Surface Temp. T_s [K]', mode: 'lines', yaxis: 'y2', line: { color: '#f59e0b', width: 2.4 } },
             { x: [cur.gRel], y: [cur.mDotSolid], mode: 'markers', yaxis: 'y1', showlegend: false, marker: { color: '#10b981', size: 12, line: { color: '#fff', width: 2 } } }
           ], {
             ...baseLayout,
             margin: { l: 54, r: 50, t: 16, b: 42 },
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
             yaxis: { ...baseLayout.yaxis, range: [0, 5.5], title: { text: "Mass Burning Rate m'' [g/m²/s]", font: { size: 11, color: '#10b981' } } },
-            yaxis2: { title: { text: 'Temp. Superficie T_s [K]', font: { size: 11, color: '#f59e0b' } }, overlaying: 'y', side: 'right', range: [500, 950], gridcolor: 'rgba(0,0,0,0)' },
+            yaxis2: { title: { text: 'Surface Temp. T_s [K]', font: { size: 11, color: '#f59e0b' } }, overlaying: 'y', side: 'right', range: [500, 950], gridcolor: 'rgba(0,0,0,0)' },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
         }
@@ -1841,21 +1866,21 @@
             { name: 'Candle µg (ISS)', L: 0.015, g: 0.0001, col: '#38bdf8' },
             { name: 'BASS / BASS-II', L: 0.05, g: 0.0001, col: '#22d3ee' },
             { name: 'Saffire I–VI (Cygnus)', L: 0.40, g: 0.0001, col: '#f43f5e' },
-            { name: 'Candle Terra (1g)', L: 0.02, g: 1.00, col: '#fbbf24' },
+            { name: 'Candle Earth (1g)', L: 0.02, g: 1.00, col: '#fbbf24' },
             { name: 'Wood Cribs (Lab)', L: 0.18, g: 1.00, col: '#f59e0b' },
-            { name: 'Pool Fire (Medio)', L: 0.85, g: 1.00, col: '#ef4444' },
-            { name: 'Incendio Forestale (Scala Reale)', L: 15.0, g: 1.00, col: '#dc2626' }
+            { name: 'Pool Fire (Medium)', L: 0.85, g: 1.00, col: '#ef4444' },
+            { name: 'Wildfire (Full Scale)', L: 15.0, g: 1.00, col: '#dc2626' }
           ];
 
           renderPlotSafe('chart6A', [
-            { x: lGrid, y: gIso1e2, name: 'Isolinea Gr = 10² (Diffusivo)', mode: 'lines', line: { color: '#38bdf8', width: 1.6, dash: 'dot' } },
-            { x: lGrid, y: gIso1e6, name: 'Isolinea Gr = 10⁶ (Convezione Laminare)', mode: 'lines', line: { color: '#10b981', width: 2, dash: 'dash' } },
-            { x: lGrid, y: gIso1e9, name: 'Transizione Turbolenta (Gr = 10⁹)', mode: 'lines', line: { color: '#ef4444', width: 2.5 } },
+            { x: lGrid, y: gIso1e2, name: 'Isoline Gr = 10² (Diffusive)', mode: 'lines', line: { color: '#38bdf8', width: 1.6, dash: 'dot' } },
+            { x: lGrid, y: gIso1e6, name: 'Isoline Gr = 10⁶ (Laminar Convection)', mode: 'lines', line: { color: '#10b981', width: 2, dash: 'dash' } },
+            { x: lGrid, y: gIso1e9, name: 'Turbulent Transition (Gr = 10⁹)', mode: 'lines', line: { color: '#ef4444', width: 2.5 } },
             {
               x: landmarks.map(p => p.L),
               y: landmarks.map(p => p.g),
               text: landmarks.map(p => p.name),
-              name: 'Esperimenti Storici (Fig. 1)',
+              name: 'Historical Experiments (Fig. 1)',
               mode: 'markers+text',
               textposition: 'top center',
               textfont: { size: 9.5, color: '#e2e8f0' },
@@ -1864,15 +1889,15 @@
             {
               x: [state.lengthM41],
               y: [cur.gRel],
-              name: 'Cursore Utente (L, g/g_e)',
+              name: 'User Cursor (L, g/g_e)',
               mode: 'markers',
               marker: { color: '#a855f7', size: 15, symbol: 'star', line: { color: '#ffffff', width: 2 } }
             }
           ], {
             ...baseLayout,
             hovermode: 'closest',
-            xaxis: { ...baseLayout.xaxis, type: 'log', range: [-2.1, 1.8], title: { text: 'Scala di Lunghezza Caratteristica L [m] (Log)', font: { size: 11, color: '#94a3b8' } } },
-            yaxis: { ...baseLayout.yaxis, type: 'log', range: [-4.4, 0.5], title: { text: 'Gravità Relativa g / g_e (Log)', font: { size: 11, color: '#94a3b8' } } },
+            xaxis: { ...baseLayout.xaxis, type: 'log', range: [-2.1, 1.8], title: { text: 'Characteristic Length Scale L [m] (Log)', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, type: 'log', range: [-4.4, 0.85], title: { text: 'Relative Gravity g / g_e (Log)', font: { size: 11, color: '#94a3b8' } } },
             shapes: [
               // Knowledge Gap Partial Gravity
               { type: 'rect', x0: 0.01, x1: 5.0, y0: 0.002, y1: 0.5, fillcolor: 'rgba(148, 163, 184, 0.12)', line: { color: '#64748b', width: 1, dash: 'dot' } },
@@ -1880,8 +1905,8 @@
               { type: 'rect', x0: 1.2, x1: 50.0, y0: 0.00005, y1: 2.0, fillcolor: 'rgba(56, 189, 248, 0.09)', line: { color: '#38bdf8', width: 1, dash: 'dot' } }
             ],
             annotations: [
-              { x: -0.6, y: -1.4, text: 'KNOWLEDGE GAP: GRAVITÀ PARZIALE', showarrow: false, font: { size: 9.5, color: '#cbd5e1', family: 'JetBrains Mono' } },
-              { x: 0.9, y: -2.8, text: 'KNOWLEDGE GAP: SCALABILITÀ', showarrow: false, font: { size: 9.5, color: '#38bdf8', family: 'JetBrains Mono' } }
+              { x: -0.6, y: -1.4, text: 'KNOWLEDGE GAP: PARTIAL GRAVITY', showarrow: false, font: { size: 9.5, color: '#cbd5e1', family: 'JetBrains Mono' } },
+              { x: 0.9, y: -2.8, text: 'KNOWLEDGE GAP: SCALABILITY', showarrow: false, font: { size: 9.5, color: '#38bdf8', family: 'JetBrains Mono' } }
             ]
           }, plotCfg);
 
@@ -1904,15 +1929,15 @@
           });
 
           renderPlotSafe('chart6B', [
-            { x: tArr, y: xp1g, name: 'x_p(t) Pirolisi Terra (1 g_e)', mode: 'lines', line: { color: '#ef4444', width: 2.5 } },
-            { x: tArr, y: xb1g, name: 'x_b(t) Burnout Terra (1 g_e)', mode: 'lines', line: { color: '#ef4444', width: 2, dash: 'dash' } },
-            { x: tArr, y: xp0g, name: 'x_p(t) Pirolisi Saffire (0 g_e)', mode: 'lines', line: { color: '#38bdf8', width: 2.5 } },
+            { x: tArr, y: xp1g, name: 'x_p(t) Pyrolysis Earth (1 g_e)', mode: 'lines', line: { color: '#ef4444', width: 2.5 } },
+            { x: tArr, y: xb1g, name: 'x_b(t) Burnout Earth (1 g_e)', mode: 'lines', line: { color: '#ef4444', width: 2, dash: 'dash' } },
+            { x: tArr, y: xp0g, name: 'x_p(t) Pyrolysis Saffire (0 g_e)', mode: 'lines', line: { color: '#38bdf8', width: 2.5 } },
             { x: tArr, y: xb0g, name: 'x_b(t) Burnout Saffire (0 g_e)', mode: 'lines', line: { color: '#38bdf8', width: 2, dash: 'dash' } },
             { x: tArr, y: xpCur, name: `x_p(t) Live (${cur.gRel.toFixed(3)} g_e)`, mode: 'lines', line: { color: '#10b981', width: 3.2 } }
           ], {
             ...baseLayout,
-            xaxis: { ...baseLayout.xaxis, range: [0, 28], title: { text: "Tempo dall'Accensione t [s]", font: { size: 11, color: '#94a3b8' } } },
-            yaxis: { ...baseLayout.yaxis, range: [0, maxLenCm * 1.05], title: { text: `Posizione Fronte lungo il Campione [cm] (L = ${maxLenCm.toFixed(0)} cm)`, font: { size: 11, color: '#94a3b8' } } }
+            xaxis: { ...baseLayout.xaxis, range: [0, 28], title: { text: "Time Since Ignition t [s]", font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, maxLenCm * 1.05], title: { text: `Front Position Along the Sample [cm] (L = ${maxLenCm.toFixed(0)} cm)`, font: { size: 11, color: '#94a3b8' } } }
           }, plotCfg);
         }
 
@@ -1933,7 +1958,7 @@
           ], {
             ...baseLayout,
             xaxis: { ...baseLayout.xaxis, range: [-0.03, 2.05] },
-            yaxis: { ...baseLayout.yaxis, range: [0, 2.1], title: { text: 'Indice Normalizzato (Valore / Valore a 1.0 g_e)', font: { size: 11, color: '#94a3b8' } } },
+            yaxis: { ...baseLayout.yaxis, range: [0, 2.1], title: { text: 'Normalized Index (Value / Value at 1.0 g_e)', font: { size: 11, color: '#94a3b8' } } },
             shapes: [vLine(cur.gRel)]
           }, plotCfg);
         }
@@ -2165,9 +2190,9 @@
         ctx.font = '600 11px "JetBrains Mono", monospace';
         ctx.fillText(`H_duct = ${phys.hDuctCm.toFixed(2)} cm (δ_f/H = ${phys.confRatio.toFixed(2)})`, wallLeftX, 14);
 
-        const statusTxt = isQuenched ? 'QUENCHING CONDUTTIVO A PARETE!' :
-                          phys.accelRatio25 > 1.15 ? `ACCELERAZIONE TERMICA: ${phys.accelRatio25.toFixed(2)}×` :
-                          `REGIME DEBOLMENTE CONFINATO: ${phys.accelRatio25.toFixed(2)}×`;
+        const statusTxt = isQuenched ? 'CONDUCTIVE WALL QUENCHING!' :
+                          phys.accelRatio25 > 1.15 ? `THERMAL ACCELERATION: ${phys.accelRatio25.toFixed(2)}×` :
+                          `WEAKLY CONFINED REGIME: ${phys.accelRatio25.toFixed(2)}×`;
         ctx.fillStyle = isQuenched ? '#f87171' : phys.accelRatio25 > 1.15 ? '#fbbf24' : '#34d399';
         ctx.fillText(statusTxt, wallLeftX, H - 14);
       }
@@ -2212,9 +2237,9 @@
         ctx.beginPath(); ctx.arc(lx, ly, 8, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#94a3b8';
         ctx.font = '600 10.5px "JetBrains Mono", monospace';
-        ctx.fillText('RIFERIMENTO: 1.00 g_e', lx - 68, 24);
+        ctx.fillText('REFERENCE: 1.00 g_e', lx - 68, 24);
         ctx.fillStyle = '#fbbf24';
-        ctx.fillText('Hot Flame + Fuliggine (~1810 K)', lx - 86, H - 18);
+        ctx.fillText('Hot Flame + Soot (~1810 K)', lx - 86, H - 18);
 
         // LATO DESTRO: Stato Attivo (Sferica Cool/Warm Flame in µg, o elongata con g)
         const rx = W * 0.75;
@@ -2411,7 +2436,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast(`Report CSV completo esportato (${gPoints.length} punti • tutti i 6 esperimenti NASA PSI)`);
+        showToast(`Full CSV report exported (${gPoints.length} points • all 6 NASA PSI experiments)`);
       }
 
       function showToast(msg) {
@@ -2457,10 +2482,10 @@
           if (state.microZoom) {
             if (state.gRel > 0.05) state.gRel = 0.015;
             gSlider.max = '0.05';
-            showToast('Zoom Microgravità attivato (0.0001 – 0.0500 g_e)');
+            showToast('Microgravity zoom enabled (0.0001 – 0.0500 g_e)');
           } else {
             gSlider.max = '2.00';
-            showToast('Scala gravità completa attivata (0.0001 – 2.00 g_e)');
+            showToast('Full gravity scale enabled (0.0001 – 2.00 g_e)');
           }
           updateAll();
         });
@@ -2495,7 +2520,7 @@
             });
             btn.classList.remove('bg-[#111827]', 'border-[#1e293b]');
             btn.classList.add('bg-sky-500/15', 'border-sky-500/60', 'font-semibold');
-            showToast(`Preset applicato: ${btn.textContent.trim()}`);
+            showToast(`Preset applied: ${btn.textContent.trim()}`);
           });
         });
 
@@ -2507,7 +2532,7 @@
         // Controlli locali dei singoli Tab PSI
         document.getElementById('resetFlameFront117Btn').addEventListener('click', () => {
           state.frontResetOffset = animTime;
-          showToast('Fronte di pirolisi x_p(t) riavviato a t = 0 s');
+          showToast('Pyrolysis front x_p(t) restarted at t = 0 s');
         });
 
         document.getElementById('hDuctSlider').addEventListener('input', e => {
@@ -2541,7 +2566,7 @@
         document.getElementById('toggleGlobalControlsBtn').addEventListener('click', function () {
           const wrap = document.getElementById('globalControlsWrapper');
           const isHidden = wrap.classList.toggle('hidden');
-          this.textContent = isHidden ? 'Controlli ▼' : 'Controlli ▲';
+          this.textContent = isHidden ? 'Controls ▼' : 'Controls ▲';
         });
       }
 
@@ -2587,6 +2612,20 @@
             }
           }, 300);
         }
+      }
+
+      // Le larghezze delle voci di legenda vengono misurate al primo disegno: se il font Inter arriva
+      // dopo, le voci si accavallano. A font caricati si ridisegnano i grafici gia' presenti.
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          if (typeof window.Plotly === 'undefined') return;
+          Object.entries(chartRegistry).forEach(([id, reg]) => {
+            const el = document.getElementById(id);
+            if (el && el.classList.contains('js-plotly-plot')) {
+              try { window.Plotly.newPlot(el, reg.traces, reg.layout, reg.config); } catch (e) {}
+            }
+          });
+        });
       }
 
       if (document.readyState === 'loading') {
