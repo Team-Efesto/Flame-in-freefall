@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artemis MPH • Simulatore Propagazione Incendio in Gravità Lunare (0.165 g_e)</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- KaTeX per formule di scala e trasferimento termico -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    body {
+      background-color: #070b14;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .lunar-grid {
+      background-image:
+        radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 85%, rgba(245, 158, 11, 0.06), transparent 40%),
+        linear-gradient(to right, rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+    }
+
+    input[type="range"].mph-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #1e293b;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].mph-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #070b14;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"].mph-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    input[type="range"].mph-slider-amber::-webkit-slider-thumb {
+      background: #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+    }
+    input[type="range"].mph-slider-emerald::-webkit-slider-thumb {
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    }
+    input[type="range"].mph-slider-rose::-webkit-slider-thumb {
+      background: #f43f5e;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+    }
+
+    .card-panel {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid #1e293b;
+      box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body class="lunar-grid min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- Toast Notifiche -->
+  <div id="toastBox" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-4 opacity-0">
+    <div class="flex items-center gap-2.5 bg-[#0f172a] border border-sky-400/50 text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium">
+      <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+      <span id="toastText">Parametro aggiornato</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. HEADER MISSIONE ARTEMIS MPH & TELEMETRIA AMBIENTALE LUNARE          -->
+  <!-- ===================================================================== -->
+  <header class="sticky top-0 z-40 bg-[#070b14]/95 backdrop-blur-md border-b border-[#1e293b]">
+    <div class="max-w-[1680px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-amber-500/20 border border-sky-400/40 flex items-center justify-center shrink-0">
+          <!-- Icona Modulo Lunare MPH -->
+          <svg class="w-6 h-6 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="6" width="18" height="10" rx="4" />
+            <path d="M6 16l-2 4M18 16l2 4M12 16v4M8 10h2M14 10h2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-400/40 font-mono text-[10px] font-bold text-sky-300 uppercase tracking-wider">
+              ARTEMIS SURFACE HABITAT • MPH (ASI / NASA)
+            </span>
+            <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 font-mono text-[10px] font-bold text-amber-300">
+              g_Luna = 0.165 g_e (1.62 m/s²)
+            </span>
+          </div>
+          <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">
+            Simulatore di Propagazione Incendio &amp; Sicurezza Antincendio nel Modulo Lunare MPH
+          </h1>
+        </div>
+      </div>
+
+      <!-- Telemetria Rapida Live -->
+      <div class="flex flex-wrap items-center gap-2 font-mono text-xs">
+        <div class="bg-[#0f172a] border border-[#1e293b] px-3 py-1.5 rounded-xl">
+          <span class="text-slate-400">p¹·⁸g:</span>
+          <span id="hdrP18g" class="text-emerald-400 font-bold">351</span>
+          <span class="text-[10px] text-slate-500">kPa¹·⁸·gₑ</span>
+        </div>
+        <div class="bg-[#0f172a] border border-[#1e293b] px-3 py-1.5 rounded-xl">
+          <span class="text-slate-400">Standoff δ_f:</span>
+          <span id="hdrDeltaF" class="text-amber-400 font-bold">7.8 mm</span>
+        </div>
+        <div class="bg-[#0f172a] border border-[#1e293b] px-3 py-1.5 rounded-xl">
+          <span class="text-slate-400">Spread V_f:</span>
+          <span id="hdrVf" class="text-sky-400 font-bold">1.48 cm/s</span>
+        </div>
+        <div id="hdrRiskBadge" class="bg-amber-500/15 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-xl font-bold">
+          RISCHIO MODERATO • PROPAGAZIONE ATTIVA
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- 2. CONTENUTO PRINCIPALE: PANNELLO CONTROLLI + SIMULATORE 2D MPH       -->
+  <!-- ===================================================================== -->
+  <main class="max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-5 space-y-5 flex-1">
+
+    <!-- PRESET ATMOSFERE SPAZIALI ARTEMIS / NASA -->
+    <section class="card-panel rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mr-1">Preset Atmosfera MPH:</span>
+        <button type="button" data-p="56.5" data-o2="34.0" data-u="12" class="env-preset-btn px-3 py-1.5 rounded-xl bg-sky-500/20 border border-sky-400/60 text-xs font-semibold text-sky-200 transition cursor-pointer">
+          Artemis Exploration Atmosphere (56.5 kPa • 34% O₂)
+        </button>
+        <button type="button" data-p="70.3" data-o2="26.5" data-u="12" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-slate-200 transition cursor-pointer">
+          Atmosfera Intermedia (70.3 kPa • 26.5% O₂)
+        </button>
+        <button type="button" data-p="101.3" data-o2="21.0" data-u="15" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-slate-200 transition cursor-pointer">
+          Standard ISS / Terrestre (101.3 kPa • 21% O₂)
+        </button>
+        <button type="button" data-p="45.0" data-o2="36.0" data-u="8" class="env-preset-btn px-3 py-1.5 rounded-xl bg-[#0b1120] hover:bg-slate-800 border border-[#1e293b] text-xs font-medium text-amber-200 transition cursor-pointer">
+          Pre-EVA Depressurizzata (45.0 kPa • 36% O₂)
+        </button>
+      </div>
+
+      <!-- Controlli Riproduzione Simulazione + Pulsante Chiusura Tab/Pannello Sinistro -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btnToggleAside" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition cursor-pointer flex items-center gap-1.5">
+          <span id="btnToggleAsideIcon">◀</span>
+          <span id="btnToggleAsideText">Chiudi Pannello Sinistro</span>
+        </button>
+        <button id="btnPlayPause" type="button" class="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 text-xs font-bold text-emerald-300 transition cursor-pointer">
+          ⏸ Pausa Simulazione
+        </button>
+        <button id="btnResetSim" type="button" class="px-3.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/50 text-xs font-bold text-sky-300 transition cursor-pointer">
+          ↺ Riavvia Accensione (t = 0)
+        </button>
+        <button id="btnSuppress" type="button" class="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/50 text-xs font-bold text-rose-300 transition cursor-pointer">
+          🧯 Attiva Soppressione (N₂ / Fine Water Mist)
+        </button>
+      </div>
+    </section>
+
+    <!-- GRIGLIA PRINCIPALE: COLONNA CONTROLLI (4 col) + SIMULATORE SEZIONE MPH (8 col) -->
+    <div id="mphMainGrid" class="grid grid-cols-1 xl:grid-cols-12 gap-5 transition-all duration-300">
+
+      <!-- COLONNA SINISTRA: SELEZIONE MATERIALI MPH, ATMOSFERA & VENTILAZIONE -->
+      <aside id="mphLeftAside" class="xl:col-span-4 space-y-4 transition-all duration-300">
+
+        <!-- 1. Selezione Materiale Interno del Modulo MPH -->
+        <div class="card-panel rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              1. Materiali Interni del Modulo MPH
+            </h2>
+            <button id="btnCloseAsideDirect" type="button" title="Chiudi questo pannello" class="text-[11px] font-mono text-slate-400 hover:text-sky-300 bg-[#070b14] border border-[#1e293b] px-2 py-0.5 rounded cursor-pointer transition">
+              ✕ Chiudi
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <label for="materialSelect" class="block text-xs text-slate-300 font-medium">
+              Scegli il rivestimento o componente interno soggetto a innesco:
+            </label>
+            <select id="materialSelect" class="w-full bg-[#070b14] border border-sky-500/40 rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer">
+              <option value="nomex">Rivestimento Parete Nomex® HT90-40 (Ignifugo)</option>
+              <option value="sibal" selected>Tessuto Cellulosico / Cotone Equipaggio (SIBAL)</option>
+              <option value="kapton_ml">Isolamento Multistrato Kapton® / Mylar Alluminizzato</option>
+              <option value="etfe_wire">Cablaggio Avionico ETFE / Tefzel® (Rack ECLSS)</option>
+              <option value="pmma_win">Finestra / Pannello Polimetilmetacrilato (PMMA)</option>
+              <option value="poly_foam">Schiuma Acustica / Imballaggio Polietilene (PE)</option>
+            </select>
+          </div>
+
+          <!-- Scheda Tecnica Termochimica del Materiale Selezionato -->
+          <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-3 space-y-2 text-xs">
+            <div class="flex justify-between items-center border-b border-[#1e293b] pb-1.5">
+              <span class="text-slate-400">Classe NASA-STD-6001B:</span>
+              <span id="matNasaRating" class="font-mono font-bold text-amber-400">B-Rating (Combustibile)</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+              <div>
+                <span class="text-slate-500 block text-[10px]">Temp. Pirolisi $T_p$:</span>
+                <span id="matTp" class="text-slate-200 font-semibold">620 K</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px]">MOI (1g → 0.165g):</span>
+                <span id="matMoi" class="text-cyan-400 font-semibold">18.2% → 16.8% O₂</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px]">Densità Superficiale:</span>
+                <span id="matAreaDens" class="text-slate-200 font-semibold">18.2 mg/cm²</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px]">Calore Combustione $\Delta H_c$:</span>
+                <span id="matHc" class="text-orange-400 font-semibold">16.7 kJ/g</span>
+              </div>
+            </div>
+            <p id="matNotes" class="text-[11px] text-slate-400 leading-snug pt-1 border-t border-[#1e293b]">
+              Tessuto standard di riferimento NASA (75% cellulosa, 25% fibra di vetro inerte). Sensibile al trasporto convettivo e all'arricchimento di O₂.
+            </p>
+          </div>
+        </div>
+
+        <!-- 2. Parametri Atmosferici Interni MPH (Pressione & Ossigeno) -->
+        <div class="card-panel rounded-2xl p-4 space-y-3.5">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+            2. Atmosfera Interna Cabina MPH
+          </h2>
+
+          <!-- Pressione Cabina p -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label for="pressureMphSlider" class="text-xs font-semibold text-slate-200">
+                Pressione Cabina <span class="font-mono text-amber-400">p</span>
+              </label>
+              <span id="pressureMphVal" class="font-mono text-xs font-bold text-amber-400">56.5 kPa (0.56 atm)</span>
+            </div>
+            <input id="pressureMphSlider" type="range" min="30" max="105" step="0.5" value="56.5" class="mph-slider mph-slider-amber" />
+            <div class="flex justify-between text-[10px] font-mono text-slate-500">
+              <span>30 kPa</span>
+              <span>56.5 (Artemis)</span>
+              <span>70.3</span>
+              <span>101.3 kPa</span>
+            </div>
+          </div>
+
+          <!-- Concentrazione Ossigeno X_O2 -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label for="oxygenMphSlider" class="text-xs font-semibold text-slate-200">
+                Percentuale Ossigeno <span class="font-mono text-emerald-400">X_O₂</span>
+              </label>
+              <span id="oxygenMphVal" class="font-mono text-xs font-bold text-emerald-400">34.0% O₂ (ppO₂ = 19.2 kPa)</span>
+            </div>
+            <input id="oxygenMphSlider" type="range" min="14" max="42" step="0.5" value="34.0" class="mph-slider mph-slider-emerald" />
+            <div class="flex justify-between text-[10px] font-mono text-slate-500">
+              <span>14% (Ipoxia)</span>
+              <span>21% (Aria)</span>
+              <span>34% (Artemis)</span>
+              <span>42%</span>
+            </div>
+          </div>
+
+          <!-- Flusso Ventilazione ECLSS U_vent -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label for="ventMphSlider" class="text-xs font-semibold text-slate-200">
+                Ventilazione ECLSS <span class="font-mono text-sky-400">U_vent</span>
+              </label>
+              <span id="ventMphVal" class="font-mono text-xs font-bold text-sky-400">12 cm/s (Ricircolo Cabina)</span>
+            </div>
+            <input id="ventMphSlider" type="range" min="0" max="35" step="1" value="12" class="mph-slider" />
+            <div class="flex justify-between text-[10px] font-mono text-slate-500">
+              <span>0 (ECLSS Off)</span>
+              <span>12 (Nominale)</span>
+              <span>25</span>
+              <span>35 cm/s</span>
+            </div>
+          </div>
+
+          <!-- Gravità Locale (Fissa su Luna 0.165 g_e con opzione confronto Terra/Marte) -->
+          <div class="pt-2 border-t border-[#1e293b] flex items-center justify-between gap-2">
+            <label for="gravModeSelect" class="text-xs font-semibold text-slate-300">Campo Gravitazionale:</label>
+            <select id="gravModeSelect" class="bg-[#070b14] border border-[#1e293b] rounded-lg px-2.5 py-1 text-xs font-mono text-sky-300 focus:outline-none cursor-pointer">
+              <option value="0.165" selected>Superficie Lunare (0.165 g_e • 1.62 m/s²)</option>
+              <option value="0.378">Superficie Marziana (0.378 g_e • 3.71 m/s²)</option>
+              <option value="1.000">Test Terrestre 1g (1.000 g_e • 9.81 m/s²)</option>
+              <option value="0.0001">Orbita Lunare Gateway (0.0001 g_e • µg)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 3. Punto di Innesco nel Modulo MPH -->
+        <div class="card-panel rounded-2xl p-4 space-y-2.5">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+            3. Sorgente di Innesco nel Modulo MPH
+          </h2>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" data-zone="table" class="zone-btn px-2 py-2 rounded-xl bg-sky-500/20 border border-sky-400 text-[11px] font-semibold text-white text-center cursor-pointer">
+              Tavolino Centrale<br/><span class="text-[9px] text-sky-300 font-mono">Piano di Lavoro</span>
+            </button>
+            <button type="button" data-zone="rack" class="zone-btn px-2 py-2 rounded-xl bg-[#070b14] border border-[#1e293b] text-[11px] font-medium text-slate-300 text-center cursor-pointer">
+              Rack Avionica<br/><span class="text-[9px] text-slate-400 font-mono">Mensola ECLSS</span>
+            </button>
+            <button type="button" data-zone="crew" class="zone-btn px-2 py-2 rounded-xl bg-[#070b14] border border-[#1e293b] text-[11px] font-medium text-slate-300 text-center cursor-pointer">
+              Cuccetta / Tessile<br/><span class="text-[9px] text-slate-400 font-mono">Zona Abitativa</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400">
+            Clicca all'interno del modulo per spostare l'innesco lungo le superfici solide (tavolino, mensola rack o cuccetta).
+          </p>
+        </div>
+      </aside>
+
+      <!-- COLONNA DESTRA: VISUALIZZATORE SEZIONE LONGITUDINALE MODULO LUNARE MPH -->
+      <section id="mphRightSection" class="xl:col-span-8 flex flex-col gap-4 transition-all duration-300">
+        <div class="card-panel rounded-2xl p-4 flex-1 flex flex-col">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-white">
+                Sezione Longitudinale Modulo Lunare Artemis MPH (Lunghezza 6.2 m × Diametro 3.4 m)
+              </h2>
+              <p class="text-[11px] text-slate-400">
+                Simulazione fisica accoppiata: pennacchio di galleggiamento lunare ($U_B \propto g^{0.5}$), standoff $\delta_f \propto p^{-0.5}g^{-0.25}$, strato di fumo al soffitto e concentrazione $\text{CO}/\text{CO}_2$.
+              </p>
+            </div>
+            <div class="flex items-center gap-3 font-mono text-xs">
+              <span class="px-2.5 py-1 rounded-lg bg-[#070b14] border border-[#1e293b] text-slate-300">
+                t = <strong id="simClockVal" class="text-sky-400">0.0 s</strong>
+              </span>
+              <span class="px-2.5 py-1 rounded-lg bg-[#070b14] border border-[#1e293b] text-slate-300">
+                HRR: <strong id="simHrrVal" class="text-orange-400">0.0 kW</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Canvas Interattivo del Modulo MPH -->
+          <div id="mphCanvasWrap" class="relative w-full flex-1 min-h-[430px] bg-[#04070d] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
+            <canvas id="mphSimCanvas" class="block w-full h-full"></canvas>
+          </div>
+
+          <!-- Barra Sensori di Sicurezza Cabina MPH (Rilevamento Fumo, CO, Pressione, Temp) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3 font-mono text-xs">
+            <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">Temp. Soffitto MPH</div>
+              <div id="sensorTempCeil" class="text-sm font-bold text-amber-400">295 K (22°C)</div>
+            </div>
+            <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">Monossido Carbonio (CO)</div>
+              <div id="sensorCoPpm" class="text-sm font-bold text-emerald-400">0 ppm (Sicuro)</div>
+            </div>
+            <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">Spessore Strato Fumo</div>
+              <div id="sensorSmokeLayer" class="text-sm font-bold text-sky-400">0.00 m</div>
+            </div>
+            <div class="bg-[#070b14] border border-[#1e293b] rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">Allarme Rilevatori NASA</div>
+              <div id="sensorAlarmState" class="text-sm font-bold text-emerald-400">NOMINALE</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 3. GRAFICI ANALITICI DI SCALA LUNARE (P, O2, MATERIALE & TEMPO)       -->
+    <!-- ===================================================================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- Grafico A: Curva di Propagazione Vf vs O2% a Pressione Cabina MPH -->
+      <div class="card-panel rounded-2xl p-4 flex flex-col">
+        <div class="mb-2">
+          <span class="text-[10px] font-mono text-sky-400 uppercase">Analisi 1 • Effetto Ossigeno &amp; Gravità Lunare</span>
+          <h3 class="text-sm font-bold text-white">Velocità di Propagazione $V_f$ [cm/s] vs Concentrazione $\text{O}_2$ (%)</h3>
+          <p class="text-[11px] text-slate-400">Confronta il materiale selezionato a $0.165\,g_e$ (Luna, $p$ attuale) rispetto a $1.0\,g_e$ (Terra) e al limite di estinzione MOI.</p>
+        </div>
+        <div id="chartMphO2Wrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
+          <canvas id="chartMphO2" class="block w-full h-full"></canvas>
+          <div id="tipMphO2" class="hidden pointer-events-none absolute z-20 bg-[#0f172a]/95 border border-sky-400/60 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-100 shadow-xl"></div>
+        </div>
+      </div>
+
+      <!-- Grafico B: Curva di Propagazione Vf vs Pressione Cabina p [kPa] -->
+      <div class="card-panel rounded-2xl p-4 flex flex-col">
+        <div class="mb-2">
+          <span class="text-[10px] font-mono text-amber-400 uppercase">Analisi 2 • Legge di Scala $p^{1.8}g$ in Cabina</span>
+          <h3 class="text-sm font-bold text-white">Propagazione $V_f$ [cm/s] &amp; Standoff $\delta_f$ [mm] vs Pressione $p$ [kPa]</h3>
+          <p class="text-[11px] text-slate-400">Ridurre $p$ da $101.3$ a $56.5\text{ kPa}$ riduce la convezione ($p^{1.8}g$), ma l'aumento di $\text{O}_2$ ($34\%$) accelera la cinetica.</p>
+        </div>
+        <div id="chartMphPressWrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
+          <canvas id="chartMphPress" class="block w-full h-full"></canvas>
+          <div id="tipMphPress" class="hidden pointer-events-none absolute z-20 bg-[#0f172a]/95 border border-amber-400/60 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-100 shadow-xl"></div>
+        </div>
+      </div>
+
+      <!-- Grafico C: Evoluzione Temporale HRR [kW] & Tossicità CO nel Volume MPH -->
+      <div class="card-panel rounded-2xl p-4 flex flex-col">
+        <div class="mb-2">
+          <span class="text-[10px] font-mono text-rose-400 uppercase">Analisi 3 • Dinamica nel Volume Chiuso MPH (~48 m³)</span>
+          <h3 class="text-sm font-bold text-white">Heat Release Rate (HRR [kW]) &amp; Accumulo CO [ppm] nel Tempo</h3>
+          <p class="text-[11px] text-slate-400">In gravità lunare il pennacchio è più lento e spesso ($\delta_T \propto g^{-0.25}$), rallentando il tempo di arrivo ai sensori al soffitto.</p>
+        </div>
+        <div id="chartMphTimeWrap" class="relative w-full h-[270px] bg-[#070b14] rounded-xl border border-[#1e293b] overflow-hidden cursor-crosshair">
+          <canvas id="chartMphTime" class="block w-full h-full"></canvas>
+          <div id="tipMphTime" class="hidden pointer-events-none absolute z-20 bg-[#0f172a]/95 border border-rose-400/60 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-slate-100 shadow-xl"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 4. SPIEGAZIONE FISICA DELLA COMBUSTIONE NEL MODULO LUNARE MPH          -->
+    <!-- ===================================================================== -->
+    <section class="card-panel rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-5 text-xs text-slate-300 leading-relaxed">
+      <div class="space-y-1.5">
+        <h4 class="font-bold text-sky-400 font-mono uppercase">1. Fluidodinamica Lunare (0.165 g_e)</h4>
+        <p>
+          Sulla superficie lunare ($g = 1.62\text{ m/s}^2$), la velocità di galleggiamento dei gas caldi si riduce a $U_B \propto g^{0.5} \approx 0.406\,U_{B,\text{Terra}}$ (~$44\text{ cm/s}$ invece di $108\text{ cm/s}$). Di conseguenza, lo spessore dello strato limite termico e la distanza di standoff della fiamma $\delta_f \propto p^{-0.5}g^{-0.25}$ aumentano del <strong>+57% a 101 kPa</strong> e fino al <strong>+110% a 56.5 kPa</strong>.
+        </p>
+      </div>
+      <div class="space-y-1.5">
+        <h4 class="font-bold text-amber-400 font-mono uppercase">2. Paradosso Atmosfera Artemis (56.5 kPa • 34% O₂)</h4>
+        <p>
+          Per prevenire la malattia da decompressione prima delle attività extraveicolari (EVA), i moduli lunari Artemis operano a pressione ridotta ($56.5\text{ kPa}$) ma arricchita al <strong>34% di $\text{O}_2$</strong>. Mentre la bassa pressione riduce il numero di Grashof ($Gr \propto p^2g$), l'elevata frazione molare di $\text{O}_2$ abbatte il tempo chimico ($Da$ alto), rendendo materiali come il <strong>Nomex</strong> o il <strong>Kapton</strong> significativamente più infiammabili rispetto all'aria terrestre.
+        </p>
+      </div>
+      <div class="space-y-1.5">
+        <h4 class="font-bold text-rose-400 font-mono uppercase">3. Confinamento &amp; Rilevamento nel Modulo MPH</h4>
+        <p>
+          Nel volume cilindrico dell'MPH ($\sim 48\text{ m}^3$), la minor spinta di galleggiamento fa sì che il pennacchio di fumo risalga più lentamente e si espanda lateralmente prima di raggiungere il soffitto, ritardando l'attivazione dei rilevatori ottici standard ma aumentando il rischio di <strong>interazione radiativa con le pareti</strong> (effetto NASA PSI-25).
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- 5. MOTORE FISICO-CHIMICO LUNARE & RENDERING INTERATTIVO               -->
+  <!-- ===================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // Database Materiali Interni Modulo Lunare Artemis MPH (dati NASA-STD-6001B & PSI)
+      const MPH_MATERIALS = {
+        nomex: {
+          name: 'Rivestimento Nomex® HT90-40',
+          rating: 'A-Rating (Autoestinguente in aria)',
+          ratingColor: 'text-emerald-400',
+          tp: 760,           // K
+          moi1g: 28.5,       // % O2 a 1g, 101 kPa
+          areaDens: 24.5,    // mg/cm^2
+          hc: 14.2,          // kJ/g
+          vfRef: 0.45,       // cm/s base ref
+          coYield: 0.045,    // g CO / g fuel
+          sootYield: 0.015,
+          notes: 'Tessuto aramidico ignifugo usato per rivestimenti interni e sacche stowage. In gravità lunare (0.165 g_e) con 34% O₂ può sostenere una propagazione lenta.'
+        },
+        sibal: {
+          name: 'Tessuto Cellulosico / Cotone (SIBAL)',
+          rating: 'B-Rating (Combustibile Standard)',
+          ratingColor: 'text-amber-400',
+          tp: 620,
+          moi1g: 18.2,
+          areaDens: 18.2,
+          hc: 16.7,
+          vfRef: 3.00,
+          coYield: 0.032,
+          sootYield: 0.025,
+          notes: 'Tessuto di riferimento NASA (75% cellulosa, 25% fibra di vetro inerte, Thinnakornsutibutr et al. 2025). Rappresenta indumenti dell’equipaggio e salviette.'
+        },
+        kapton_ml: {
+          name: 'Isolamento Kapton® / Mylar Alluminizzato',
+          rating: 'A/B-Rating (Condizionale ad O₂)',
+          ratingColor: 'text-amber-400',
+          tp: 790,
+          moi1g: 25.0,
+          areaDens: 12.0,
+          hc: 18.5,
+          vfRef: 1.15,
+          coYield: 0.068,
+          sootYield: 0.040,
+          notes: 'Pellicola poliimmidica usata per isolamento termico e cablaggi. Estremamente sottile: la bassa inerzia termica (ρ_s c_s τ) favorisce rapida accensione ad alto O₂.'
+        },
+        etfe_wire: {
+          name: 'Cablaggio Avionico ETFE / Tefzel®',
+          rating: 'B-Rating (Sovraccarico Elettrico)',
+          ratingColor: 'text-orange-400',
+          tp: 695,
+          moi1g: 23.5,
+          areaDens: 32.0,
+          hc: 15.8,
+          vfRef: 0.85,
+          coYield: 0.085,
+          sootYield: 0.055,
+          notes: 'Isolante fluoropolimerico per cavi nei rack ECLSS e avionica MPH. Produce fumi tossici (CO e fluoruri) se surriscaldato in atmosfera arricchita.'
+        },
+        pmma_win: {
+          name: 'Pannello / Finestra PMMA (Acrilico)',
+          rating: 'C-Rating (Combustibile Denso)',
+          ratingColor: 'text-rose-400',
+          tp: 640,
+          moi1g: 17.4,
+          areaDens: 118.0,
+          hc: 24.9,
+          vfRef: 1.65,
+          coYield: 0.022,
+          sootYield: 0.035,
+          notes: 'Polimetilmetacrilato spessore ~1 mm. Elevato calore di combustione (24.9 kJ/g) e gocciolamento fuso ridotto in gravità lunare (0.165 g_e).'
+        },
+        poly_foam: {
+          name: 'Schiuma Imballaggio Polietilene (PE)',
+          rating: 'C-Rating (Alta Velocità Rilascio)',
+          ratingColor: 'text-rose-400',
+          tp: 610,
+          moi1g: 17.1,
+          areaDens: 14.5,
+          hc: 43.2,
+          vfRef: 4.10,
+          coYield: 0.038,
+          sootYield: 0.060,
+          notes: 'Materiale da imballaggio logistico cargo. Altissimo potere calorifico (43.2 kJ/g) e rapidissima propagazione del fronte di pirolisi in atmosfera 34% O₂.'
+        }
+      };
+
+      const state = {
+        matKey: 'sibal',
+        pressure: 56.5,     // kPa (Artemis default)
+        o2Pct: 34.0,        // % O2 (Artemis default)
+        uVent: 12,          // cm/s (ECLSS ventilation)
+        gRel: 0.165,        // g/g_e (Moon surface)
+        ignitionZone: 'table',
+        ignXNorm: 0.50,     // posizione X normalizzata sul tavolino centrale (0..1)
+        ignYNorm: 0.72,     // ancorato alla superficie del tavolino
+        running: true,
+        suppressed: false,
+        suppressionProgress: 0,
+        simTime: 0,
+        smokeParticles: [],
+        emberParticles: []
+      };
+
+      // =========================================================================
+      // CALCOLO FISICO-CHIMICO ACCOPPIATO (LUNAR BUOYANCY + ARTEMIS ATMOSPHERE)
+      // =========================================================================
+      function computeMphPhysics(custom = {}) {
+        const mat = MPH_MATERIALS[custom.matKey || state.matKey];
+        const p = custom.pressure !== undefined ? custom.pressure : state.pressure;
+        const o2 = custom.o2Pct !== undefined ? custom.o2Pct : state.o2Pct;
+        const uVent = custom.uVent !== undefined ? custom.uVent : state.uVent;
+        const gRel = custom.gRel !== undefined ? custom.gRel : state.gRel;
+
+        const pRatio = p / 101.3;
+        const ppO2 = p * (o2 / 100.0); // kPa pressione parziale O2
+        const p18g = Math.pow(p, 1.8) * gRel;
+
+        // 1. Velocità di galleggiamento lunare UB ~ p^0 * g^0.5
+        const uBuoyCmS = 108.0 * Math.pow(Math.max(0.0001, gRel), 0.5);
+        const uTotCmS = Math.sqrt(uBuoyCmS * uBuoyCmS + uVent * uVent);
+
+        // 2. Spessore strato limite termico e standoff fiamma delta_f ~ p^-0.5 * g^-0.25
+        const uEff = Math.max(0.22, uTotCmS / 108.0);
+        const deltaTNorm = Math.min(3.8, Math.pow(pRatio, -0.5) * Math.pow(gRel + 0.0015 * Math.pow(uVent / 10, 2), -0.25));
+        const deltaFMm = 4.20 * deltaTNorm;
+        const deltaTMm = 10.6 * deltaTNorm;
+
+        // 3. Limite MOI effettivo in gravità ridotta / lunare (da esperimenti NASA BASS & Parabolic Flights)
+        const lunarMoiShift = -1.65 * (1 - Math.pow(gRel, 0.35)) + (uVent === 0 ? 1.8 : 0.02 * Math.max(0, uVent - 12));
+        const pMoiShift = -1.1 * Math.log(pRatio); // leggero effetto cinetico a bassa pressione
+        const moiEff = Math.max(13.5, mat.moi1g + lunarMoiShift + pMoiShift);
+
+        // 4. Velocità di propagazione fiamma Vf [cm/s]
+        const o2Margin = o2 - moiEff;
+        let vfCmS = 0;
+        if (o2Margin > 0) {
+          const transportFactor = Math.pow(Math.pow(pRatio, 1.8) * gRel + 0.018 * (uVent / 10) * Math.pow(pRatio, 0.6), 0.52);
+          const kineticsFactor = Math.pow(Math.max(0.05, o2Margin / Math.max(2.5, 21.0 - mat.moi1g + 3.5)), 1.45);
+          const ceilingBoost = (custom.zone || state.ignitionZone) === 'ceiling' ? 1.24 : 1.0;
+          vfCmS = mat.vfRef * transportFactor * kineticsFactor * ceilingBoost;
+        }
+
+        if (state.suppressed && custom.applySuppression !== false) {
+          vfCmS *= Math.max(0, 1 - state.suppressionProgress * 1.35);
+        }
+
+        // 5. Evoluzione temporale estensione incendio L_burn [m], HRR [kW], Strato Fumo e CO [ppm]
+        const t = custom.simTime !== undefined ? custom.simTime : state.simTime;
+        const maxSampleLenM = 2.6;
+        const lBurnM = o2Margin <= 0 ? 0.02 : Math.min(maxSampleLenM, 0.04 + (vfCmS / 100.0) * t * 1.15);
+
+        const mDotGm2S = o2Margin <= 0 ? 0 : (2.2 + 0.35 * o2Margin) * Math.pow(pRatio, 0.45) * Math.pow(gRel + 0.05, 0.22);
+        const burnAreaM2 = lBurnM * 0.45;
+        let hrrKw = (mDotGm2S * burnAreaM2 * mat.hc);
+        if (state.suppressed && custom.applySuppression !== false) {
+          hrrKw *= Math.max(0, 1 - state.suppressionProgress * 1.4);
+        }
+
+        const mphVolumeM3 = 48.0;
+        const airDensityKgM3 = 1.225 * pRatio;
+        const totalGasKg = mphVolumeM3 * airDensityKgM3;
+
+        const integratedFuelG = mDotGm2S * burnAreaM2 * t * 0.55;
+        const coMassG = integratedFuelG * mat.coYield * (o2 < 22 ? 1.35 : 0.85);
+        const coPpm = Math.min(2500, ((coMassG / 28.01) / ((totalGasKg * 1000) / 29.0)) * 1e6);
+
+        const plumeRiseTimeS = 2.4 / Math.pow(Math.max(0.01, gRel), 0.45);
+        const effectiveSmokeTime = Math.max(0, t - plumeRiseTimeS * 0.65);
+        const smokeLayerM = o2Margin <= 0 ? 0 : Math.min(1.85, (0.012 + 0.0018 * hrrKw) * effectiveSmokeTime);
+        const tempCeilingK = 295 + Math.min(480, hrrKw * 4.8 * (1 - state.suppressionProgress * 0.7));
+
+        // Classificazione Rischio
+        let riskLabel = 'AUTOESTINGUENTE (O₂ < MOI)';
+        let riskClass = 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300';
+        if (o2Margin > 0 && vfCmS < 1.0) {
+          riskLabel = 'PROPAGAZIONE LENTA • MONITORAGGIO';
+          riskClass = 'bg-sky-500/15 border-sky-500/40 text-sky-300';
+        } else if (vfCmS >= 1.0 && vfCmS < 2.8) {
+          riskLabel = 'RISCHIO MODERATO • PROPAGAZIONE ATTIVA';
+          riskClass = 'bg-amber-500/15 border-amber-500/40 text-amber-300';
+        } else if (vfCmS >= 2.8) {
+          riskLabel = 'ALLARME CRITICO • RAPIDA PROPAGAZIONE O₂';
+          riskClass = 'bg-rose-500/20 border-rose-500/50 text-rose-300';
+        }
+
+        return {
+          mat,
+          p,
+          pRatio,
+          o2,
+          ppO2,
+          uVent,
+          gRel,
+          p18g,
+          uBuoyCmS,
+          uTotCmS,
+          deltaFMm,
+          deltaTMm,
+          moiEff,
+          o2Margin,
+          vfCmS,
+          lBurnM,
+          mDotGm2S,
+          hrrKw,
+          coPpm,
+          smokeLayerM,
+          tempCeilingK,
+          riskLabel,
+          riskClass
+        };
+      }
+
+      // =========================================================================
+      // RENDERING SEZIONE LONGITUDINALE MODULO LUNARE ARTEMIS MPH (CANVAS 2D)
+      // =========================================================================
+      function resizeCanvases() {
+        const ids = [
+          { wrap: 'mphCanvasWrap', canvas: 'mphSimCanvas' },
+          { wrap: 'chartMphO2Wrap', canvas: 'chartMphO2' },
+          { wrap: 'chartMphPressWrap', canvas: 'chartMphPress' },
+          { wrap: 'chartMphTimeWrap', canvas: 'chartMphTime' }
+        ];
+        const dpr = window.devicePixelRatio || 1;
+        ids.forEach(item => {
+          const wEl = document.getElementById(item.wrap);
+          const cEl = document.getElementById(item.canvas);
+          if (!wEl || !cEl) return;
+          const W = wEl.clientWidth;
+          const H = wEl.clientHeight;
+          if (W > 0 && H > 0) {
+            cEl.width = Math.floor(W * dpr);
+            cEl.height = Math.floor(H * dpr);
+            const ctx = cEl.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          }
+        });
+      }
+
+      function drawMphHabitat(phys, animSec) {
+        const wrap = document.getElementById('mphCanvasWrap');
+        const canvas = document.getElementById('mphSimCanvas');
+        if (!wrap || !canvas || wrap.clientWidth === 0) return;
+        const W = wrap.clientWidth;
+        const H = wrap.clientHeight;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Sfondo Esterno Superficie Lunare (Cielo Nero Spazio + Terra all'orizzonte + Regolite)
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+        skyGrad.addColorStop(0, '#02040a');
+        skyGrad.addColorStop(1, '#091122');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Stelle
+        for (let i = 0; i < 42; i++) {
+          const sx = ((i * 197 + 41) % W);
+          const sy = ((i * 83 + 19) % (H * 0.55));
+          const alpha = 0.25 + ((i * 17) % 60) / 100;
+          ctx.fillStyle = `rgba(226, 232, 240, ${alpha.toFixed(2)})`;
+          ctx.fillRect(sx, sy, (i % 5 === 0) ? 2 : 1.3, (i % 5 === 0) ? 2 : 1.3);
+        }
+
+        // Pianeta Terra azzurro
+        const earthX = W - 75;
+        const earthY = 58;
+        const earthGlow = ctx.createRadialGradient(earthX, earthY, 8, earthX, earthY, 26);
+        earthGlow.addColorStop(0, '#60a5fa');
+        earthGlow.addColorStop(0.55, '#1d4ed8');
+        earthGlow.addColorStop(1, 'rgba(29, 78, 216, 0)');
+        ctx.fillStyle = earthGlow;
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.beginPath();
+        ctx.arc(earthX - 3, earthY - 2, 4, 0, Math.PI * 1.4);
+        ctx.fill();
+
+        // Suolo Lunare (Regolite)
+        const groundY = H - 36;
+        const regGrad = ctx.createLinearGradient(0, groundY, 0, H);
+        regGrad.addColorStop(0, '#475569');
+        regGrad.addColorStop(0.25, '#334155');
+        regGrad.addColorStop(1, '#0f172a');
+        ctx.fillStyle = regGrad;
+        ctx.fillRect(0, groundY, W, H - groundY);
+
+        // 2. Geometria Scafo Modulo Lunare Artemis MPH
+        const padX = Math.max(32, W * 0.05);
+        const modX = padX;
+        const modW = W - padX * 2;
+        const modBotY = groundY - 22;
+        const modTopY = Math.max(36, H * 0.13);
+        const modH = modBotY - modTopY;
+        const cornerR = Math.min(72, modH * 0.34);
+
+        // Gambe di supporto atterraggio lunare MPH
+        [modX + modW * 0.15, modX + modW * 0.50, modX + modW * 0.85].forEach(lx => {
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(lx, modBotY);
+          ctx.lineTo(lx - 15, groundY);
+          ctx.moveTo(lx, modBotY);
+          ctx.lineTo(lx + 15, groundY);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(lx - 8, modBotY + 11);
+          ctx.lineTo(lx + 8, modBotY + 11);
+          ctx.stroke();
+
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(lx - 22, groundY - 3, 44, 4);
+        });
+
+        // Scafo pressurizzato
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(modX, modTopY, modW, modH, cornerR);
+        const hullBg = ctx.createLinearGradient(0, modTopY, 0, modBotY);
+        hullBg.addColorStop(0, '#0f172a');
+        hullBg.addColorStop(0.5, '#0b1222');
+        hullBg.addColorStop(1, '#080d1a');
+        ctx.fillStyle = hullBg;
+        ctx.fill();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#64748b';
+        ctx.stroke();
+        ctx.clip();
+
+        // Costolature strutturali
+        const intLeft = modX + cornerR * 0.55;
+        const intRight = modX + modW - cornerR * 0.55;
+        const intW = intRight - intLeft;
+
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.35)';
+        ctx.lineWidth = 2;
+        for (let rx = intLeft; rx <= intRight; rx += intW / 6) {
+          ctx.beginPath();
+          ctx.moveTo(rx, modTopY);
+          ctx.lineTo(rx, modBotY);
+          ctx.stroke();
+        }
+
+        // Oblò cabina
+        const winX = intLeft + intW * 0.50;
+        const winY = modTopY + modH * 0.30;
+        const winR = Math.min(26, modH * 0.085);
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(winX, winY, winR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#475569';
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(winX, winY, winR - 5, -Math.PI * 0.8, -Math.PI * 0.25);
+        ctx.stroke();
+
+        // Pavimento
+        const floorY = modBotY - 14;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(modX, floorY, modW, 14);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        for (let fx = modX; fx < modX + modW; fx += 18) {
+          ctx.beginPath();
+          ctx.moveTo(fx, floorY);
+          ctx.lineTo(fx, modBotY);
+          ctx.stroke();
+        }
+
+        // Condotto ECLSS soffitto
+        ctx.fillStyle = '#172033';
+        ctx.fillRect(intLeft, modTopY + 6, intW, 18);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(intLeft, modTopY + 6, intW, 18);
+
+        // Luci LED soffitto
+        [0.20, 0.50, 0.80].forEach(lf => {
+          const lx = intLeft + intW * lf;
+          ctx.fillStyle = '#e0f2fe';
+          ctx.fillRect(lx - 18, modTopY + 23, 36, 3);
+          const coneGrad = ctx.createLinearGradient(0, modTopY + 26, 0, floorY);
+          coneGrad.addColorStop(0, 'rgba(186, 230, 253, 0.07)');
+          coneGrad.addColorStop(1, 'rgba(186, 230, 253, 0.0)');
+          ctx.fillStyle = coneGrad;
+          ctx.beginPath();
+          ctx.moveTo(lx - 18, modTopY + 26);
+          ctx.lineTo(lx + 18, modTopY + 26);
+          ctx.lineTo(lx + 65, floorY);
+          ctx.lineTo(lx - 65, floorY);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // Sensori soffitto
+        const sensorXs = [intLeft + intW * 0.32, intLeft + intW * 0.68];
+        const alarmActive = phys.smokeLayerM > 0.22 || phys.coPpm > 50 || phys.tempCeilingK > 335;
+        sensorXs.forEach(sx => {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(sx - 6, modTopY + 24, 12, 5);
+          ctx.fillStyle = alarmActive && Math.sin(animSec * 10) > 0 ? '#ef4444' : '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(sx, modTopY + 30, 3.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 3A. RACK AVIONICA (Sinistra)
+        const rackX = intLeft + intW * 0.02;
+        const rackW = intW * 0.23;
+        const rackY = modTopY + 36;
+        const rackH = floorY - rackY;
+        ctx.fillStyle = '#131c31';
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(rackX, rackY, rackW, rackH);
+        ctx.strokeRect(rackX, rackY, rackW, rackH);
+
+        for (let ry = rackY + 22; ry < floorY - 26; ry += 26) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(rackX + 6, ry, rackW - 12, 18);
+          ctx.strokeStyle = '#1e293b';
+          ctx.strokeRect(rackX + 6, ry, rackW - 12, 18);
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(rackX + 10, ry + 7, 4, 4);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(rackX + 17, ry + 7, 4, 4);
+        }
+        const rackShelfY = rackY + rackH * 0.56;
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(rackX + 2, rackShelfY, rackW - 4, 5);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 9px "JetBrains Mono", monospace';
+        ctx.fillText('RACK ECLSS', rackX + 8, rackY + 14);
+
+        // 3B. TAVOLINO CENTRALE SCIENTIFICO (Centro)
+        const tableW = intW * 0.36;
+        const tableX = intLeft + intW * 0.50 - tableW * 0.5;
+        const tableTopY = floorY - Math.max(54, modH * 0.22);
+        const tableThick = 8;
+
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(tableX + 12, tableTopY + tableThick, 7, floorY - (tableTopY + tableThick));
+        ctx.fillRect(tableX + tableW - 19, tableTopY + tableThick, 7, floorY - (tableTopY + tableThick));
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(tableX + 12, tableTopY + 26, tableW - 24, 5);
+
+        const tableGrad = ctx.createLinearGradient(0, tableTopY, 0, tableTopY + tableThick);
+        tableGrad.addColorStop(0, '#94a3b8');
+        tableGrad.addColorStop(1, '#475569');
+        ctx.fillStyle = tableGrad;
+        ctx.beginPath();
+        ctx.roundRect(tableX, tableTopY, tableW, tableThick, 3);
+        ctx.fill();
+
+        const sampleW = tableW * 0.78;
+        const sampleX = tableX + (tableW - sampleW) * 0.5;
+        const sampleY = tableTopY - 4;
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(sampleX, sampleY, sampleW, 4);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 9px "JetBrains Mono", monospace';
+        ctx.fillText('TAVOLINO ESPERIMENTI / WORKBENCH', tableX + 8, tableTopY + 21);
+
+        // 3C. CUCCETTA EQUIPAGGIO (Destra)
+        const bunkX = intLeft + intW * 0.73;
+        const bunkW = intW * 0.25;
+        const bunkY = rackY + 8;
+        const bunkH = floorY - bunkY;
+        ctx.fillStyle = '#131c31';
+        ctx.fillRect(bunkX, bunkY, bunkW, bunkH);
+        ctx.strokeStyle = '#334155';
+        ctx.strokeRect(bunkX, bunkY, bunkW, bunkH);
+
+        const bunkSurfaceY = floorY - Math.max(46, modH * 0.19);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(bunkX + 4, bunkSurfaceY, bunkW - 8, 8);
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.roundRect(bunkX + 6, bunkSurfaceY - 6, bunkW - 12, 6, 2);
+        ctx.fill();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('CUCCETTA / AIRLOCK', bunkX + 8, bunkY + 14);
+
+        // Linee flusso ventilazione ECLSS (U_vent)
+        if (phys.uVent > 0) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.26)';
+          ctx.lineWidth = 1.2;
+          const flowShift = (animSec * phys.uVent * 2.5) % 42;
+          for (let vx = intLeft + flowShift; vx < intRight; vx += 42) {
+            ctx.beginPath();
+            ctx.moveTo(vx, modTopY + 42);
+            ctx.lineTo(vx + 12, modTopY + 42);
+            ctx.lineTo(vx + 9, modTopY + 39);
+            ctx.stroke();
+          }
+        }
+
+        // 4. ANCORAGGIO FISICO DEL FUOCO ALLE SUPERFICI SOLIDE
+        let ignPxX = intLeft + state.ignXNorm * intW;
+        let ignPxY = sampleY;
+        let surfMinX = sampleX;
+        let surfMaxX = sampleX + sampleW;
+
+        if (state.ignitionZone === 'table') {
+          ignPxX = Math.max(sampleX + 10, Math.min(sampleX + sampleW - 10, ignPxX));
+          ignPxY = sampleY;
+          surfMinX = sampleX;
+          surfMaxX = sampleX + sampleW;
+        } else if (state.ignitionZone === 'rack') {
+          ignPxX = Math.max(rackX + 10, Math.min(rackX + rackW - 10, ignPxX));
+          ignPxY = rackShelfY;
+          surfMinX = rackX + 4;
+          surfMaxX = rackX + rackW - 4;
+        } else {
+          ignPxX = Math.max(bunkX + 12, Math.min(bunkX + bunkW - 12, ignPxX));
+          ignPxY = bunkSurfaceY - 6;
+          surfMinX = bunkX + 6;
+          surfMaxX = bunkX + bunkW - 6;
+        }
+
+        // Strato fumo al soffitto
+        if (phys.smokeLayerM > 0.01) {
+          const smokePxH = Math.min(modH * 0.45, (phys.smokeLayerM / 1.85) * (modH * 0.45));
+          const smkGrad = ctx.createLinearGradient(0, modTopY, 0, modTopY + smokePxH);
+          smkGrad.addColorStop(0, 'rgba(15, 23, 42, 0.90)');
+          smkGrad.addColorStop(0.7, 'rgba(51, 65, 85, 0.55)');
+          smkGrad.addColorStop(1, 'rgba(51, 65, 85, 0.0)');
+          ctx.fillStyle = smkGrad;
+          ctx.fillRect(modX, modTopY, modW, smokePxH);
+        }
+
+        // Espansione orizzontale char e fronte
+        const maxSurfSpan = surfMaxX - surfMinX;
+        const spreadFrac = Math.min(1.0, phys.lBurnM / 2.4);
+        const halfSpreadPx = Math.max(6, (maxSurfSpan * 0.5) * spreadFrac);
+        const burnLeftX = Math.max(surfMinX, ignPxX - halfSpreadPx * (phys.uVent > 5 ? 0.65 : 1.0));
+        const burnRightX = Math.min(surfMaxX, ignPxX + halfSpreadPx * (phys.uVent > 5 ? 1.35 : 1.0));
+        const activeBurnW = Math.max(8, burnRightX - burnLeftX);
+
+        // Brace carbonizzata
+        ctx.fillStyle = '#1e1b18';
+        ctx.fillRect(burnLeftX, ignPxY - 3, activeBurnW, 4);
+        const emberGlow = ctx.createLinearGradient(burnLeftX, 0, burnRightX, 0);
+        emberGlow.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+        emberGlow.addColorStop(0.5, 'rgba(251, 146, 60, 0.95)');
+        emberGlow.addColorStop(1, 'rgba(239, 68, 68, 0.4)');
+        ctx.fillStyle = emberGlow;
+        ctx.fillRect(burnLeftX, ignPxY - 2, activeBurnW, 3);
+
+        // Lingue di fiamma
+        if (phys.hrrKw > 0.05) {
+          const baseFlameH = Math.min(modH * 0.58, 22 + Math.sqrt(phys.hrrKw) * 13 * Math.pow(phys.gRel / 0.165, 0.25));
+          const tiltRatio = phys.uVent / Math.max(8, phys.uBuoyCmS);
+          const tiltPx = Math.min(115, baseFlameH * tiltRatio * 1.35);
+
+          const haloX = (burnLeftX + burnRightX) * 0.5 + tiltPx * 0.25;
+          const haloY = ignPxY - baseFlameH * 0.35;
+          const haloR = Math.max(45, activeBurnW * 0.9 + baseFlameH * 0.75);
+          const haloGrad = ctx.createRadialGradient(haloX, haloY, 4, haloX, haloY, haloR);
+          haloGrad.addColorStop(0, 'rgba(251, 146, 60, 0.32)');
+          haloGrad.addColorStop(0.6, 'rgba(239, 68, 68, 0.10)');
+          haloGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+          ctx.fillStyle = haloGrad;
+          ctx.beginPath();
+          ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
+          ctx.fill();
+
+          const tongues = [
+            { offset: -0.28, hScale: 0.78, phase: 0.0 },
+            { offset:  0.00, hScale: 1.00, phase: 1.7 },
+            { offset:  0.28, hScale: 0.84, phase: 3.1 }
+          ];
+
+          tongues.forEach(tg => {
+            const cx = (burnLeftX + burnRightX) * 0.5 + tg.offset * activeBurnW * 0.65;
+            const halfW = Math.max(7, activeBurnW * 0.36 + phys.deltaFMm * 0.6);
+            const tH = baseFlameH * tg.hScale;
+            const flicker = Math.sin(animSec * (5 + phys.gRel * 4) + tg.phase) * (2.5 + phys.gRel * 3.5);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(cx - halfW, ignPxY);
+            ctx.quadraticCurveTo(
+              cx - halfW * 1.15 + tiltPx * 0.45,
+              ignPxY - tH * 0.52,
+              cx + tiltPx + flicker,
+              ignPxY - tH
+            );
+            ctx.quadraticCurveTo(
+              cx + halfW * 1.2 + tiltPx * 0.55,
+              ignPxY - tH * 0.48,
+              cx + halfW,
+              ignPxY
+            );
+            ctx.closePath();
+
+            const fGrad = ctx.createLinearGradient(cx, ignPxY, cx + tiltPx, ignPxY - tH);
+            if (phys.o2 > 28) {
+              fGrad.addColorStop(0, 'rgba(56, 189, 248, 0.96)');
+              fGrad.addColorStop(0.22, 'rgba(254, 240, 138, 0.96)');
+              fGrad.addColorStop(0.62, 'rgba(249, 115, 22, 0.88)');
+              fGrad.addColorStop(1, 'rgba(239, 68, 68, 0.12)');
+            } else {
+              fGrad.addColorStop(0, 'rgba(56, 189, 248, 0.90)');
+              fGrad.addColorStop(0.32, 'rgba(251, 191, 36, 0.90)');
+              fGrad.addColorStop(0.76, 'rgba(234, 88, 12, 0.78)');
+              fGrad.addColorStop(1, 'rgba(220, 38, 38, 0.12)');
+            }
+            ctx.fillStyle = fGrad;
+            ctx.fill();
+            ctx.restore();
+          });
+
+          // Particelle
+          if (state.running && Math.random() < 0.68) {
+            state.smokeParticles.push({
+              x: burnLeftX + Math.random() * activeBurnW + tiltPx * 0.65,
+              y: ignPxY - baseFlameH * 0.82,
+              vx: (phys.uVent * 0.08) + (Math.random() - 0.5) * 0.6,
+              vy: -(0.35 + 1.4 * Math.pow(phys.gRel, 0.5)),
+              r: 4 + Math.random() * 6,
+              alpha: 0.42
+            });
+          }
+          if (state.running && Math.random() < 0.35) {
+            state.emberParticles.push({
+              x: burnLeftX + Math.random() * activeBurnW,
+              y: ignPxY - 4,
+              vx: (phys.uVent * 0.12) + (Math.random() - 0.5) * 1.2,
+              vy: -(0.6 + 1.8 * Math.pow(phys.gRel, 0.5) + Math.random() * 0.8),
+              life: 1.0
+            });
+          }
+        }
+
+        // Aggiorna particelle
+        for (let i = state.smokeParticles.length - 1; i >= 0; i--) {
+          const sp = state.smokeParticles[i];
+          if (state.running) {
+            sp.x += sp.vx;
+            sp.y += sp.vy;
+            sp.r += 0.12;
+            sp.alpha *= 0.986;
+            if (sp.y <= modTopY + 18) {
+              sp.y = modTopY + 18;
+              sp.vy = 0;
+              sp.vx += (Math.random() - 0.5) * 0.4;
+            }
+          }
+          if (sp.alpha < 0.03) {
+            state.smokeParticles.splice(i, 1);
+            continue;
+          }
+          ctx.fillStyle = `rgba(148, 163, 184, ${sp.alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let i = state.emberParticles.length - 1; i >= 0; i--) {
+          const ep = state.emberParticles[i];
+          if (state.running) {
+            ep.x += ep.vx;
+            ep.y += ep.vy;
+            ep.life -= 0.025;
+          }
+          if (ep.life <= 0) {
+            state.emberParticles.splice(i, 1);
+            continue;
+          }
+          ctx.fillStyle = `rgba(253, 186, 116, ${ep.life.toFixed(2)})`;
+          ctx.beginPath();
+          ctx.arc(ep.x, ep.y, 1.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Soppressione antincendio
+        if (state.suppressed) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.72)';
+          ctx.lineWidth = 2.2;
+          ctx.setLineDash([4, 4]);
+          sensorXs.forEach(sx => {
+            ctx.beginPath();
+            ctx.moveTo(sx, modTopY + 30);
+            ctx.lineTo((burnLeftX + burnRightX) * 0.5, ignPxY);
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
+
+        // Punto innesco
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(ignPxX, ignPxY, 5.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Footer HUD
+        ctx.font = '600 10.5px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`SUPERFICIE LUNARE • g = ${(phys.gRel * 9.81).toFixed(2)} m/s² (${phys.gRel.toFixed(3)} g_e)`, modX, H - 12);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(`U_buoy = ${phys.uBuoyCmS.toFixed(1)} cm/s | U_vent = ${phys.uVent} cm/s`, W - modX - 245, H - 12);
+      }
+
+      // =========================================================================
+      // DISEGNO DEI 3 GRAFICI ANALITICI SU CANVAS HiDPI
+      // =========================================================================
+      const chartMetaStore = {};
+
+      function drawLineChart(canvasId, seriesList, xCfg, yCfg, markerX, hoverX) {
+        const c = document.getElementById(canvasId);
+        if (!c) return;
+        const wrap = c.parentElement;
+        const dpr = window.devicePixelRatio || 1;
+        const W = Math.max(260, (wrap ? wrap.clientWidth : 0) || c.clientWidth || 420);
+        const H = Math.max(220, (wrap ? wrap.clientHeight : 0) || c.clientHeight || 270);
+
+        if (c.width !== Math.floor(W * dpr) || c.height !== Math.floor(H * dpr)) {
+          c.width = Math.floor(W * dpr);
+          c.height = Math.floor(H * dpr);
+        }
+        const ctx = c.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        chartMetaStore[canvasId] = { seriesList, xCfg, yCfg, markerX };
+
+        const padL = 48;
+        const padR = 16;
+        const padT = 26;
+        const padB = 34;
+        const pW = Math.max(30, W - padL - padR);
+        const pH = Math.max(30, H - padT - padB);
+
+        const mapX = x => padL + ((x - xCfg.min) / Math.max(1e-6, xCfg.max - xCfg.min)) * pW;
+        const mapY = y => padT + pH - ((y - yCfg.min) / Math.max(1e-6, yCfg.max - yCfg.min)) * pH;
+
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.strokeStyle = '#1e293b';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i <= 5; i++) {
+          const frac = i / 5;
+          const gx = padL + frac * pW;
+          ctx.beginPath();
+          ctx.moveTo(gx, padT);
+          ctx.lineTo(gx, padT + pH);
+          ctx.stroke();
+          const xv = xCfg.min + frac * (xCfg.max - xCfg.min);
+          ctx.fillText(xv.toFixed(xCfg.dec || 0), gx - 12, padT + pH + 14);
+
+          const gy = padT + frac * pH;
+          ctx.beginPath();
+          ctx.moveTo(padL, gy);
+          ctx.lineTo(padL + pW, gy);
+          ctx.stroke();
+          const yv = yCfg.max - frac * (yCfg.max - yCfg.min);
+          ctx.fillText(yv.toFixed(yCfg.dec || 1), 6, gy + 3);
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padL, padT, pW, pH);
+        ctx.clip();
+
+        seriesList.forEach(s => {
+          if (!s.pts || s.pts.length === 0) return;
+          ctx.save();
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = s.width || 2.5;
+          if (s.dash) ctx.setLineDash(s.dash);
+          ctx.beginPath();
+          s.pts.forEach((pt, idx) => {
+            const px = mapX(pt.x);
+            const py = mapY(pt.y);
+            if (idx === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        if (markerX !== undefined && isFinite(markerX)) {
+          const mx = mapX(markerX);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(mx, padT);
+          ctx.lineTo(mx, padT + pH);
+          ctx.stroke();
+          ctx.restore();
+
+          if (seriesList[0] && seriesList[0].pts && seriesList[0].pts.length > 0) {
+            let bestPt = seriesList[0].pts[0];
+            let bestDist = Infinity;
+            seriesList[0].pts.forEach(pt => {
+              const d = Math.abs(pt.x - markerX);
+              if (d < bestDist) {
+                bestDist = d;
+                bestPt = pt;
+              }
+            });
+            if (bestPt) {
+              ctx.fillStyle = seriesList[0].color;
+              ctx.beginPath();
+              ctx.arc(mapX(bestPt.x), mapY(bestPt.y), 4.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 1.3;
+              ctx.stroke();
+            }
+          }
+        }
+
+        if (hoverX !== undefined && isFinite(hoverX)) {
+          const hx = mapX(hoverX);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(hx, padT); ctx.lineTo(hx, padT + pH); ctx.stroke();
+          seriesList.forEach(s => {
+            let bPt = s.pts[0], bD = Infinity;
+            s.pts.forEach(pt => {
+              const d = Math.abs(pt.x - hoverX);
+              if (d < bD) { bD = d; bPt = pt; }
+            });
+            if (bPt) {
+              ctx.fillStyle = s.color;
+              ctx.beginPath();
+              ctx.arc(mapX(bPt.x), mapY(bPt.y), 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        let lx = padL;
+        ctx.font = '9.5px "Inter", sans-serif';
+        seriesList.forEach(s => {
+          ctx.fillStyle = s.color;
+          ctx.fillRect(lx, 10, 10, 3);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillText(s.label, lx + 14, 14);
+          lx += ctx.measureText(s.label).width + 24;
+        });
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '9.5px "Inter", sans-serif';
+        ctx.fillText(xCfg.title, padL + pW * 0.5 - ctx.measureText(xCfg.title).width * 0.5, H - 5);
+      }
+
+      function renderAnalyticalCharts(phys) {
+        const o2Grid = [];
+        for (let o = 14; o <= 42; o += 0.5) o2Grid.push(o);
+        const ptsMoon = o2Grid.map(o => ({ x: o, y: computeMphPhysics({ o2Pct: o, gRel: phys.gRel, applySuppression: false }).vfCmS }));
+        const ptsEarth = o2Grid.map(o => ({ x: o, y: computeMphPhysics({ o2Pct: o, gRel: 1.0, applySuppression: false }).vfCmS }));
+        const maxVf1 = Math.max(4.5, Math.max(...ptsEarth.map(p => p.y)) * 1.1, Math.max(...ptsMoon.map(p => p.y)) * 1.15);
+
+        drawLineChart('chartMphO2', [
+          { label: `Modulo MPH (${phys.gRel.toFixed(3)} g_e)`, color: '#38bdf8', width: 2.8, pts: ptsMoon },
+          { label: 'Riferimento Terra (1.0 g_e)', color: '#f59e0b', width: 2.0, dash: [5, 4], pts: ptsEarth }
+        ], { min: 14, max: 42, dec: 0, unit: '% O₂', title: 'Concentrazione Ossigeno Cabina O₂ [%]' }, { min: 0, max: Math.ceil(maxVf1), dec: 1 }, phys.o2);
+
+        const pGrid = [];
+        for (let pr = 30; pr <= 105; pr += 2.5) pGrid.push(pr);
+        const ptsPressVf = pGrid.map(pr => ({ x: pr, y: computeMphPhysics({ pressure: pr, applySuppression: false }).vfCmS }));
+        const ptsPressDf = pGrid.map(pr => ({ x: pr, y: computeMphPhysics({ pressure: pr, applySuppression: false }).deltaFMm / 4.0 }));
+        const maxY2 = Math.max(4.5, Math.max(...ptsPressVf.map(p => p.y)) * 1.15, Math.max(...ptsPressDf.map(p => p.y)) * 1.15);
+
+        drawLineChart('chartMphPress', [
+          { label: 'Propagazione V_f [cm/s]', color: '#10b981', width: 2.8, pts: ptsPressVf },
+          { label: 'Standoff δ_f / 4 [mm]', color: '#a855f7', width: 2.2, dash: [4, 3], pts: ptsPressDf }
+        ], { min: 30, max: 105, dec: 0, unit: ' kPa', title: 'Pressione Cabina MPH p [kPa]' }, { min: 0, max: Math.ceil(maxY2), dec: 1 }, phys.p);
+
+        const tGrid = [];
+        for (let t = 0; t <= 120; t += 3) tGrid.push(t);
+        const ptsHrr = tGrid.map(t => ({ x: t, y: computeMphPhysics({ simTime: t, applySuppression: false }).hrrKw }));
+        const ptsCo = tGrid.map(t => ({ x: t, y: computeMphPhysics({ simTime: t, applySuppression: false }).coPpm / 20.0 }));
+        const maxY3 = Math.max(15, Math.max(...ptsHrr.map(p => p.y)) * 1.15, Math.max(...ptsCo.map(p => p.y)) * 1.15);
+
+        drawLineChart('chartMphTime', [
+          { label: 'HRR Incendio [kW]', color: '#f43f5e', width: 2.8, pts: ptsHrr },
+          { label: 'CO Cabina [ppm / 20]', color: '#22d3ee', width: 2.2, dash: [5, 3], pts: ptsCo }
+        ], { min: 0, max: 120, dec: 0, unit: ' s', title: 'Tempo dall\'Innesco t [s]' }, { min: 0, max: Math.ceil(maxY3), dec: 0 }, Math.min(120, state.simTime));
+      }
+
+      function bindInteractiveChartHover(canvasId, tipId) {
+        const c = document.getElementById(canvasId);
+        const tip = document.getElementById(tipId);
+        if (!c || !tip) return;
+
+        function handlePointer(clientX) {
+          const meta = chartMetaStore[canvasId];
+          if (!meta) return;
+          const rect = c.getBoundingClientRect();
+          const W = rect.width;
+          const padL = 48, padR = 16;
+          const pW = Math.max(30, W - padL - padR);
+          const relX = clientX - rect.left;
+
+          if (relX < padL || relX > padL + pW) {
+            tip.classList.add('hidden');
+            drawLineChart(canvasId, meta.seriesList, meta.xCfg, meta.yCfg, meta.markerX);
+            return;
+          }
+
+          const norm = (relX - padL) / pW;
+          const xVal = meta.xCfg.min + norm * (meta.xCfg.max - meta.xCfg.min);
+          drawLineChart(canvasId, meta.seriesList, meta.xCfg, meta.yCfg, meta.markerX, xVal);
+
+          const lines = [`<div class="text-sky-300 font-bold mb-0.5">${xVal.toFixed(1)}${meta.xCfg.unit || ''}</div>`];
+          meta.seriesList.forEach(s => {
+            let bestPt = s.pts[0], bestD = Infinity;
+            s.pts.forEach(pt => {
+              const d = Math.abs(pt.x - xVal);
+              if (d < bestD) { bestD = d; bestPt = pt; }
+            });
+            if (bestPt) {
+              lines.push(`<div style="color:${s.color}">${s.label}: <strong>${bestPt.y.toFixed(2)}</strong></div>`);
+            }
+          });
+
+          tip.innerHTML = lines.join('');
+          tip.classList.remove('hidden');
+          tip.style.left = `${Math.min(W - 185, Math.max(8, relX + 10))}px`;
+          tip.style.top = '34px';
+        }
+
+        c.addEventListener('mousemove', e => handlePointer(e.clientX));
+        c.addEventListener('touchmove', e => {
+          if (e.touches && e.touches[0]) handlePointer(e.touches[0].clientX);
+        }, { passive: true });
+        c.addEventListener('mouseleave', () => {
+          tip.classList.add('hidden');
+          const meta = chartMetaStore[canvasId];
+          if (meta) drawLineChart(canvasId, meta.seriesList, meta.xCfg, meta.yCfg, meta.markerX);
+        });
+      }
+
+      // =========================================================================
+      // GESTIONE TOGGLE / CHIUSURA PANNELLO SINISTRO (TAB CONTROLLI)
+      // =========================================================================
+      function toggleLeftAside() {
+        const aside = document.getElementById('mphLeftAside');
+        const section = document.getElementById('mphRightSection');
+        const btnText = document.getElementById('btnToggleAsideText');
+        const btnIcon = document.getElementById('btnToggleAsideIcon');
+
+        const isClosed = aside.classList.toggle('hidden');
+        if (isClosed) {
+          section.classList.remove('xl:col-span-8');
+          section.classList.add('xl:col-span-12');
+          btnText.textContent = 'Apri Pannello Sinistro';
+          btnIcon.textContent = '▶';
+          showToast('Pannello controlli sinistro chiuso (vista simulatore espansa)');
+        } else {
+          section.classList.remove('xl:col-span-12');
+          section.classList.add('xl:col-span-8');
+          btnText.textContent = 'Chiudi Pannello Sinistro';
+          btnIcon.textContent = '◀';
+          showToast('Pannello controlli sinistro riaperto');
+        }
+
+        setTimeout(() => {
+          resizeCanvases();
+          updateUiAndPhysics();
+        }, 50);
+      }
+
+      // =========================================================================
+      // AGGIORNAMENTO SINCRONIZZATO UI & CONTROLLI
+      // =========================================================================
+      function updateUiAndPhysics() {
+        const phys = computeMphPhysics();
+
+        // Header telemetry
+        document.getElementById('hdrP18g').textContent = Math.round(phys.p18g);
+        document.getElementById('hdrDeltaF').textContent = `${phys.deltaFMm.toFixed(1)} mm`;
+        document.getElementById('hdrVf').textContent = `${phys.vfCmS.toFixed(2)} cm/s`;
+
+        const riskBadge = document.getElementById('hdrRiskBadge');
+        riskBadge.textContent = phys.riskLabel;
+        riskBadge.className = `${phys.riskClass} px-3 py-1.5 rounded-xl font-bold border`;
+
+        // Scheda materiale
+        document.getElementById('matNasaRating').textContent = phys.mat.rating;
+        document.getElementById('matNasaRating').className = `font-mono font-bold ${phys.mat.ratingColor}`;
+        document.getElementById('matTp').textContent = `${phys.mat.tp} K`;
+        document.getElementById('matMoi').textContent = `${phys.mat.moi1g.toFixed(1)}% → ${phys.moiEff.toFixed(1)}% O₂`;
+        document.getElementById('matAreaDens').textContent = `${phys.mat.areaDens.toFixed(1)} mg/cm²`;
+        document.getElementById('matHc').textContent = `${phys.mat.hc.toFixed(1)} kJ/g`;
+        document.getElementById('matNotes').textContent = phys.mat.notes;
+
+        // Readout controlli atmosfera
+        document.getElementById('pressureMphVal').textContent = `${phys.p.toFixed(1)} kPa (${(phys.p / 101.3).toFixed(2)} atm)`;
+        document.getElementById('oxygenMphVal').textContent = `${phys.o2.toFixed(1)}% O₂ (ppO₂ = ${phys.ppO2.toFixed(1)} kPa)`;
+        document.getElementById('ventMphVal').textContent = phys.uVent === 0 ? '0 cm/s (ECLSS Spento)' : `${phys.uVent} cm/s (Ricircolo Cabina)`;
+
+        // Sensori cabina MPH
+        document.getElementById('simClockVal').textContent = `${state.simTime.toFixed(1)} s`;
+        document.getElementById('simHrrVal').textContent = `${phys.hrrKw.toFixed(1)} kW`;
+        document.getElementById('sensorTempCeil').textContent = `${Math.round(phys.tempCeilingK)} K (${Math.round(phys.tempCeilingK - 273.15)}°C)`;
+        document.getElementById('sensorCoPpm').textContent = `${Math.round(phys.coPpm)} ppm`;
+        document.getElementById('sensorSmokeLayer').textContent = `${phys.smokeLayerM.toFixed(2)} m`;
+
+        const alarmEl = document.getElementById('sensorAlarmState');
+        if (state.suppressed) {
+          alarmEl.textContent = 'SOPPRESSIONE ATTIVA';
+          alarmEl.className = 'text-sm font-bold text-sky-400';
+        } else if (phys.smokeLayerM > 0.22 || phys.coPpm > 50 || phys.tempCeilingK > 335) {
+          alarmEl.textContent = 'ALLARME INCENDIO MPH!';
+          alarmEl.className = 'text-sm font-bold text-rose-400 animate-pulse';
+        } else if (phys.o2Margin <= 0) {
+          alarmEl.textContent = 'AUTOESTINTO (< MOI)';
+          alarmEl.className = 'text-sm font-bold text-emerald-400';
+        } else {
+          alarmEl.textContent = 'NOMINALE (PRE-ALLARME)';
+          alarmEl.className = 'text-sm font-bold text-amber-400';
+        }
+
+        renderAnalyticalCharts(phys);
+      }
+
+      function showToast(msg) {
+        const box = document.getElementById('toastBox');
+        document.getElementById('toastText').textContent = msg;
+        box.classList.remove('hidden');
+        requestAnimationFrame(() => box.classList.remove('translate-y-4', 'opacity-0'));
+        clearTimeout(window.__mphToast);
+        window.__mphToast = setTimeout(() => {
+          box.classList.add('translate-y-4', 'opacity-0');
+          setTimeout(() => box.classList.add('hidden'), 280);
+        }, 3000);
+      }
+
+      // Loop animazione
+      let lastFrameTs = null;
+      function frameLoop(ts) {
+        if (lastFrameTs === null) lastFrameTs = ts;
+        const dt = Math.min(0.1, (ts - lastFrameTs) / 1000);
+        lastFrameTs = ts;
+
+        if (state.running) {
+          state.simTime += dt * 1.8;
+          if (state.suppressed) {
+            state.suppressionProgress = Math.min(1.0, state.suppressionProgress + dt * 0.22);
+          }
+        }
+
+        const phys = computeMphPhysics();
+        drawMphHabitat(phys, ts / 1000);
+
+        if (Math.floor(ts / 100) !== Math.floor((ts - dt * 1000) / 100)) {
+          document.getElementById('simClockVal').textContent = `${state.simTime.toFixed(1)} s`;
+          document.getElementById('simHrrVal').textContent = `${phys.hrrKw.toFixed(1)} kW`;
+          document.getElementById('sensorTempCeil').textContent = `${Math.round(phys.tempCeilingK)} K (${Math.round(phys.tempCeilingK - 273.15)}°C)`;
+          document.getElementById('sensorCoPpm').textContent = `${Math.round(phys.coPpm)} ppm`;
+          document.getElementById('sensorSmokeLayer').textContent = `${phys.smokeLayerM.toFixed(2)} m`;
+        }
+
+        requestAnimationFrame(frameLoop);
+      }
+
+      // Collegamento eventi
+      let mphInitialized = false;
+      function initMphSimulator() {
+        if (mphInitialized) return;
+        mphInitialized = true;
+
+        document.getElementById('btnToggleAside').addEventListener('click', toggleLeftAside);
+        document.getElementById('btnCloseAsideDirect').addEventListener('click', toggleLeftAside);
+
+        document.getElementById('materialSelect').addEventListener('change', e => {
+          state.matKey = e.target.value;
+          updateUiAndPhysics();
+          showToast(`Materiale selezionato: ${MPH_MATERIALS[state.matKey].name}`);
+        });
+
+        document.getElementById('pressureMphSlider').addEventListener('input', e => {
+          state.pressure = Number(e.target.value);
+          updateUiAndPhysics();
+        });
+
+        document.getElementById('oxygenMphSlider').addEventListener('input', e => {
+          state.o2Pct = Number(e.target.value);
+          updateUiAndPhysics();
+        });
+
+        document.getElementById('ventMphSlider').addEventListener('input', e => {
+          state.uVent = Number(e.target.value);
+          updateUiAndPhysics();
+        });
+
+        document.getElementById('gravModeSelect').addEventListener('change', e => {
+          state.gRel = Number(e.target.value);
+          updateUiAndPhysics();
+          showToast(`Campo gravitazionale impostato a ${state.gRel} g_e`);
+        });
+
+        document.querySelectorAll('.env-preset-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.pressure = Number(btn.getAttribute('data-p'));
+            state.o2Pct = Number(btn.getAttribute('data-o2'));
+            state.uVent = Number(btn.getAttribute('data-u'));
+
+            document.getElementById('pressureMphSlider').value = state.pressure;
+            document.getElementById('oxygenMphSlider').value = state.o2Pct;
+            document.getElementById('ventMphSlider').value = state.uVent;
+
+            document.querySelectorAll('.env-preset-btn').forEach(b => {
+              b.classList.remove('bg-sky-500/20', 'border-sky-400/60', 'font-semibold', 'text-sky-200');
+              b.classList.add('bg-[#0b1120]', 'border-[#1e293b]', 'font-medium');
+            });
+            btn.classList.remove('bg-[#0b1120]', 'border-[#1e293b]', 'font-medium');
+            btn.classList.add('bg-sky-500/20', 'border-sky-400/60', 'font-semibold', 'text-sky-200');
+
+            updateUiAndPhysics();
+            showToast(`Preset applicato: ${btn.textContent.trim()}`);
+          });
+        });
+
+        document.querySelectorAll('.zone-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const z = btn.getAttribute('data-zone');
+            state.ignitionZone = z;
+            if (z === 'table') { state.ignXNorm = 0.50; state.ignYNorm = 0.72; }
+            if (z === 'rack') { state.ignXNorm = 0.14; state.ignYNorm = 0.56; }
+            if (z === 'crew') { state.ignXNorm = 0.85; state.ignYNorm = 0.75; }
+
+            document.querySelectorAll('.zone-btn').forEach(b => {
+              b.classList.remove('bg-sky-500/20', 'border-sky-400', 'font-semibold', 'text-white');
+              b.classList.add('bg-[#070b14]', 'border-[#1e293b]', 'text-slate-300');
+            });
+            btn.classList.remove('bg-[#070b14]', 'border-[#1e293b]', 'text-slate-300');
+            btn.classList.add('bg-sky-500/20', 'border-sky-400', 'font-semibold', 'text-white');
+
+            state.simTime = 0;
+            state.suppressed = false;
+            state.suppressionProgress = 0;
+            state.smokeParticles = [];
+            state.emberParticles = [];
+            updateUiAndPhysics();
+          });
+        });
+
+        document.getElementById('mphSimCanvas').addEventListener('click', e => {
+          const rect = e.target.getBoundingClientRect();
+          const nx = Math.max(0.06, Math.min(0.94, (e.clientX - rect.left) / rect.width));
+          state.ignXNorm = nx;
+          if (nx < 0.28) {
+            state.ignitionZone = 'rack';
+          } else if (nx > 0.71) {
+            state.ignitionZone = 'crew';
+          } else {
+            state.ignitionZone = 'table';
+          }
+
+          document.querySelectorAll('.zone-btn').forEach(b => {
+            const isMatch = b.getAttribute('data-zone') === state.ignitionZone;
+            b.classList.toggle('bg-sky-500/20', isMatch);
+            b.classList.toggle('border-sky-400', isMatch);
+            b.classList.toggle('font-semibold', isMatch);
+            b.classList.toggle('text-white', isMatch);
+            b.classList.toggle('bg-[#070b14]', !isMatch);
+            b.classList.toggle('border-[#1e293b]', !isMatch);
+            b.classList.toggle('text-slate-300', !isMatch);
+          });
+
+          state.simTime = 0;
+          state.suppressed = false;
+          state.suppressionProgress = 0;
+          state.smokeParticles = [];
+          state.emberParticles = [];
+          updateUiAndPhysics();
+          showToast('Nuovo punto di innesco ancorato alla superficie nel modulo MPH');
+        });
+
+        document.getElementById('btnPlayPause').addEventListener('click', function () {
+          state.running = !state.running;
+          this.textContent = state.running ? '⏸ Pausa Simulazione' : '▶ Riprendi Simulazione';
+        });
+
+        document.getElementById('btnResetSim').addEventListener('click', () => {
+          state.simTime = 0;
+          state.suppressed = false;
+          state.suppressionProgress = 0;
+          state.smokeParticles = [];
+          state.emberParticles = [];
+          updateUiAndPhysics();
+          showToast('Simulazione incendio MPH riavviata a t = 0.0 s');
+        });
+
+        document.getElementById('btnSuppress').addEventListener('click', () => {
+          state.suppressed = true;
+          updateUiAndPhysics();
+          showToast('Sistema di soppressione antincendio N₂ / Fine Water Mist attivato');
+        });
+
+        bindInteractiveChartHover('chartMphO2', 'tipMphO2');
+        bindInteractiveChartHover('chartMphPress', 'tipMphPress');
+        bindInteractiveChartHover('chartMphTime', 'tipMphTime');
+
+        if (typeof renderMathInElement === 'function') {
+          renderMathInElement(document.body, {
+            delimiters: [{ left: '$', right: '$', display: false }],
+            throwOnError: false
+          });
+        }
+
+        resizeCanvases();
+        updateUiAndPhysics();
+        window.addEventListener('resize', () => {
+          resizeCanvases();
+          updateUiAndPhysics();
+        });
+        requestAnimationFrame(frameLoop);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMphSimulator);
+      } else {
+        initMphSimulator();
+      }
+      window.addEventListener('load', initMphSimulator);
+    })();
+  </script>
+</body>
+</html>

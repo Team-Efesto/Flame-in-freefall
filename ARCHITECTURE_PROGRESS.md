@@ -24,14 +24,31 @@ Ultimo aggiornamento: 2026-11-14 — **Stato: prima iterazione completa e testat
 | Vector DB a runtime | Copia in tempdir all'avvio | L'app non sporca più i file versionati |
 | Grafici | Plotly, palette categoriale accessibile (dataviz skill, variante scura), max 8 colori → altrimenti errore al modello che usa facet/filtri; un solo asse y | Leggibilità e accessibilità |
 
+## Database norme di sicurezza antincendio (2026-11-15)
+| Area | Scelta | Motivo |
+|---|---|---|
+| Separazione | `vector_db_safety/` (collezione `safety`) + `data/safety/`, non mescolati con i PSI | Norme e dati sperimentali hanno ruoli diversi; il corpus PSI resta invariato |
+| Vettorizzazione | Stessa dei PSI: `split_text` 1000/200 per pagina, MiniLM-L6-v2 ONNX, stessi metadati (`experiment_tag="SAFETY"`) + `doc_category`, `topics`, `limit_ids`, `requirement_ids` | `ReportIndex` riusabile (nuovo parametro `collection`) |
+| Pulizia testo | Legature, trattini morbidi, PDF "una parola per riga" (articolo su Mir) | Il testo grezzo di pypdf era inutilizzabile per BM25 e citazioni |
+| Limiti numerici | Regole curate in `LIMIT_RULES` con ancora testuale verificata in build (la build fallisce se l'ancora manca) | Valori sempre tracciabili; le estrazioni automatiche (`safety_numeric_mentions`) restano solo candidati |
+| Modello di limite | Intervallo `[lower, upper]` + `bound_type` (zona conforme / zona di rischio) + `applies_by_default` | Gestisce in modo uniforme massimi, minimi, intervalli e soglie di rischio; esclude i limiti ad ambito ristretto dai controlli automatici |
+| Agente | Strumenti `search_safety_norms` e `check_safety_compliance` (result_id di una query, valori espliciti o tutte le simulazioni); catalogo limiti nel prompt di sistema; `read_report_pages` legge anche le norme | Le domande "rispetta le norme?" passano da un confronto calcolato, non a mente; gli strumenti si attivano solo se il DB esiste |
+| UI | Scheda "🛡️ Norme di sicurezza" nel pannello laterale: limiti, requisiti, verifica serie, upload file di simulazione, ricerca/lettura | Verifica possibile anche senza chiave API |
+| Confronto | `flame/safety.py`: alias stretti dei nomi (+ proxy opzionali), unità nel nome colonna, conversioni verso unità canoniche, margine firmato | Gli output di nuove simulazioni si confrontano senza preparazione manuale |
+
+Limiti dai documenti: 10 numerici (vedi README) + 17 requisiti NASA-STD-3001 qualitativi. Mancano soglie numeriche per i gas tossici (le SMAC JSC-20584 non sono nel corpus).
+
 ## Test eseguiti
 - AppTest headless: tutte le 37 combinazioni dataset × grandezza, toggle log, filtro, ricerca e lettore report, chat end-to-end con grafico/tabella/download: nessuna eccezione.
 - Agente su 5 tipologie di domanda (quantitativa+grafico, estrazione tabella, sintesi, teorica, dati inesistenti) + follow-up: strumenti corretti, citazioni presenti, cache del prompt attiva.
 - SQL guard: DROP, multi-statement, `read_csv`, `glob`, accesso diretto a file → bloccati.
+- Strumenti di sicurezza dell'agente provati senza API (ricerca, lettura pagine, verifica su result_id / valori / tutte le simulazioni, grandezza non verificabile); AppTest headless con la nuova scheda (toggle limiti opzionali, ricerca, lettore pagine): nessuna eccezione.
+- `build_safety_db.py`: 11 PDF → 238 chunk, 10 limiti con ancora verificata; ricerca ibrida sul nuovo DB ok; `check_store` sulle serie di simulazione e `check_dataframe` su output sintetici (conversioni di unità, proxy, limiti opzionali) verificati.
 - `build_vector_db.py` testato su PDF sintetico in DB temporaneo (guardia `--rebuild` verificata).
 - `pip install --dry-run` dei requirements: 106 pacchetti, nessun conflitto, niente torch/LangChain.
 
 ## Passi rimanenti / idee
+- [ ] Aggiungere al corpus di sicurezza le tabelle SMAC (JSC-20584) e NASA-STD-6001 per avere soglie numeriche su CO/HCN/HCl e sull'infiammabilità dei materiali.
 - [ ] Commit (file nuovi: `flame/`, `data/processed/`, `build_processed.py`, `.streamlit/config.toml`, `vector_db/*` aggiornati).
 - [ ] Verifica deploy reale su Streamlit Community Cloud (Python 3.11+).
 - [ ] Immagini dei report: non estraibili senza i PDF originali; con `dati_nasa_raw/report_pdf` si può aggiungere estrazione figure (pypdf) in `build_processed.py`.

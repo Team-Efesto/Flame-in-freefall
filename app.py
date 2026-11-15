@@ -8,19 +8,25 @@ import streamlit.components.v1 as components
 
 from flame.agent import FlameAgent
 from flame.charts import series_chart
-from flame.config import DEFAULT_MODEL
+from flame.config import DEFAULT_MODEL, SAFETY_COLLECTION, SAFETY_DIR, SAFETY_VECTOR_DB_DIR
 from flame.data_store import DataStore
 from flame.export import safe_filename, to_csv_bytes, to_xlsx_bytes
 from flame.retrieval import ReportIndex
+from flame.safety import SafetyLimits, format_limit
 
 st.set_page_config(page_title="Flame in Freefall - NASA PSI", page_icon="🔥", layout="wide")
 
 ALL = "Tutti gli esperimenti"
 KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
+
 TAB_CHAT = "💬 Assistente IA"
 TAB_DASH = "📊 Dashboard dati"
 TAB_PSI = "🪐 Simulatore PSI (g/g_e)"
 TAB_DOCS = "📚 Report scientifici"
+
+TAB_SAFETY = "🛡️ Norme di sicurezza"
+ESITO_ICON = {"conforme": "✅ conforme", "non conforme": "❌ non conforme",
+              "fuori zona di rischio": "✅ fuori zona di rischio", "in zona di rischio": "⚠️ in zona di rischio"}
 
 HTML_DASHBOARD_FILE = Path(__file__).parent / "dashboard_psi.html"
 with open(HTML_DASHBOARD_FILE, "r", encoding="utf-8") as f:
@@ -113,6 +119,17 @@ def load_index(_store: DataStore) -> ReportIndex:
     return ReportIndex(_store.pages)
 
 
+@st.cache_resource(show_spinner="Caricamento norme di sicurezza…")
+def load_safety() -> tuple[SafetyLimits | None, ReportIndex | None, str | None]:
+    """Limiti + indice delle norme antincendio; l'app funziona anche se il database non e' stato generato."""
+    try:
+        limits = SafetyLimits()
+        pages = pd.read_parquet(SAFETY_DIR / "safety_pages.parquet")
+        return limits, ReportIndex(pages, SAFETY_VECTOR_DB_DIR, collection=SAFETY_COLLECTION), None
+    except Exception as e:  # es. build_safety_db.py non ancora eseguito
+        return None, None, str(e)
+
+
 def secret(name: str, default=None):
     try:
         return st.secrets.get(name, default)
@@ -156,6 +173,7 @@ def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None =
 
 store = load_store()
 index = load_index(store)
+safety, safety_index, safety_error = load_safety()
 ds_info = store.datasets.set_index("source_file")
 
 # --------------------------------------------------------------------------- sidebar
@@ -331,7 +349,7 @@ with st.container(key="chat_area"):
 
     if query and api_key:
         agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
-                           effort=secret("ANTHROPIC_EFFORT"))
+                           effort=secret("ANTHROPIC_EFFORT"), safety=safety, safety_index=safety_index)
         st.session_state.messages.append({"role": "user", "content": query})
         with chat_box:
             with st.chat_message("user"):
@@ -370,13 +388,13 @@ with st.container(key="chat_area"):
 # ============================== PANNELLO LATERALE ==============================
 side_panel = st.container(key="side_panel")
 with side_panel:
+
     h1, h2, h3 = st.columns([3, 1, 1], vertical_alignment="center")
     h1.markdown("#### 🔬 Dati, simulazioni e report")
     h2.button("⛶ Espandi" if not st.session_state.get("panel_wide") else "🗗 Riduci", key="panel_wide_btn", on_click=toggle_wide, width="stretch")
     h3.button("✕ Chiudi", key="panel_close_btn", on_click=toggle_panel, width="stretch")
-    tab_dash, tab_psi, tab_docs = st.tabs([TAB_DASH, TAB_PSI, TAB_DOCS], key="main_tab", on_change="rerun")
+    tab_dash, tab_psi, tab_docs, tab_safety = st.tabs([TAB_DASH, TAB_PSI, TAB_DOCS, TAB_SAFETY], key="main_tab", on_change="rerun")
 
-# ============================== DASHBOARD ==============================
 with tab_dash:
     series_f, points_f, ds_f = filt(store.series), filt(store.points), filt(store.datasets)
 
@@ -518,3 +536,87 @@ with tab_docs:
             st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
 
 
+# ============================== NORME DI SICUREZZA ==============================
+def show_checks(res: pd.DataFrame, key: str, title: str):
+    """Tabella dei risultati di verifica con icone di esito e download."""
+    if res.empty:
+        st.info("Nessuna grandezza corrisponde a un limite del catalogo.")
+        return
+    view = res.assign(esito=res.esito.map(ESITO_ICON).fillna(res.esito))
+    cols = [c for c in ("esito", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
+                        "value_min", "value_max", "n_violations", "worst_value", "margin", "confronto", "unit_note",
+                        "citation") if c in view.columns]
+    m = st.columns(3)
+    m[0].metric("Verifiche", len(res))
+    m[1].metric("Non conformi", int(((res.esito == "non conforme")).sum()))
+    m[2].metric("In zona di rischio", int(((res.esito == "in zona di rischio")).sum()))
+    st.dataframe(view[cols], width="stretch", hide_index=True, height=min(420, 38 + 35 * len(view)))
+    download_buttons(res, title, key, {"fonte limiti": "data/safety/safety_limits.parquet"})
+
+
+with tab_safety:
+    if safety is None:
+        st.warning("Database delle norme di sicurezza non disponibile. Generalo con `python build_safety_db.py`."
+                   + (f"  \nDettaglio: {safety_error}" if safety_error else ""))
+    else:
+        st.caption("Norme e documenti NASA di sicurezza antincendio spaziale (database separato dai report PSI; "
+                   "il filtro esperimento della barra laterale non si applica qui).")
+        st.subheader("📏 Limiti numerici")
+        lim = safety.limits
+        lim_view = lim.assign(limite=[format_limit(r) for r in lim.itertuples()],
+                              automatico=lim.get("applies_by_default", True))
+        st.dataframe(lim_view[["limit_id", "parameter", "limite", "limit_type", "scope", "automatico", "citation"]],
+                     width="stretch", hide_index=True, height=min(420, 38 + 35 * len(lim_view)))
+        with st.expander("Testo originale e note di ogni limite"):
+            for r in lim.itertuples():
+                st.markdown(f"**{r.limit_id}** — {r.description}")
+                st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · valore non riportato numericamente nel testo"))
+        if not safety.requirements.empty:
+            with st.expander(f"📜 Requisiti NASA-STD-3001 ({len(safety.requirements)})"):
+                for r in safety.requirements.itertuples():
+                    st.markdown(f"**[{r.requirement_id}] {r.title}** — {r.text}")
+                    st.caption(r.citation)
+        st.caption("Per CO, HCN, HCl i documenti rimandano alle SMAC (JSC-20584), non incluse nel corpus.")
+
+        st.subheader("🧪 Verifica delle simulazioni")
+        c1, c2, c3 = st.columns([3, 1, 1])
+        kinds = c1.multiselect("Tipi di serie", list(KIND_LABELS), default=["simulation", "model"],
+                               format_func=lambda k: KIND_LABELS.get(k, k), key="saf_kinds")
+        include_all = c2.toggle("Limiti opzionali", key="saf_all", help="Includi i limiti ad ambito ristretto (volumi inertizzati, capacità di dispositivi)")
+        allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Confronti indicativi con grandezze affini (es. flame_length vs burn_length)")
+        if kinds:
+            res = safety.check_store(store, kinds=kinds, include_all=include_all, allow_proxy=allow_proxy)
+            if tag is not None and not res.empty and "experiment_tag" in res:
+                res = res[res.experiment_tag == tag]
+            show_checks(res, "saf_store", "verifica_norme_serie")
+
+        st.markdown("**Verifica un file di simulazione** (CSV/XLSX)")
+        st.caption("Le colonne vengono riconosciute dal nome con l'unità, es. `temperature_K`, `O2 [%]`, `x_o2`, "
+                   "`air_velocity_m_s`, `burn_length_mm`; sono accettate anche tabelle nel formato lungo di `points`.")
+        up = st.file_uploader("File dei risultati", type=["csv", "xlsx"], key="saf_upload")
+        if up is not None:
+            try:
+                sim = pd.read_csv(up) if up.name.lower().endswith(".csv") else pd.read_excel(up)
+                res = safety.check_any(sim, include_all=include_all, allow_proxy=allow_proxy)
+                show_checks(res, "saf_upload_res", f"verifica_norme_{up.name.rsplit('.', 1)[0]}")
+            except Exception as e:
+                st.error(f"Impossibile verificare il file: {e}")
+
+        st.subheader("🔎 Cerca e leggi nelle norme")
+        c1, c2 = st.columns([3, 2])
+        sq = c1.text_input("Ricerca (semantica + parole chiave; documenti in inglese)", placeholder="oxygen concentration flammability limit", key="saf_q")
+        sdocs = sorted(safety_index.pages.file_name.unique())
+        sdoc = c2.selectbox("Documento", ["Tutti"] + sdocs, key="saf_doc")
+        if sq:
+            for h in safety_index.search(sq, file_name=None if sdoc == "Tutti" else sdoc, top_k=8):
+                st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
+                            + f"  <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
+                st.caption(h.text[:500].replace("\n", " ") + "…")
+        if sdoc != "Tutti":
+            n_pages = int(safety_index.pages[safety_index.pages.file_name == sdoc].page_number.max())
+            page = st.number_input("Pagina", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
+            row = safety_index.read_pages(sdoc, int(page), int(page))
+            if not row.empty:
+                r = row.iloc[0]
+                st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {sdoc}, p. {page}]")
+                st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)
