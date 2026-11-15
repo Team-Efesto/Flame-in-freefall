@@ -78,7 +78,7 @@ def process_nasa_folder(folder_path, output_json_path, require_target=None):
     }
 
     with open(output_json_path, 'w', encoding='utf-8') as json_file:
-        json.dump(ml_dataset, json_file, indent=4, ensure_ascii=False)
+        json.dump(ml_dataset, json_file, indent=4, ensure_ascii=False, default=str)
     print(f"🚀 JSON salvato in: {output_json_path}")
 
 if __name__ == "__main__":

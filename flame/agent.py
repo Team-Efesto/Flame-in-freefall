@@ -1,0 +1,531 @@
+"""Agente Claude con tool use: interroga l'intero dataset (SQL su DuckDB), i report (retrieval
+ibrido + lettura di pagine intere + sommari) e produce tabelle e grafici renderizzati dalla UI.
+
+I risultati completi (DataFrame, figure) restano lato applicazione come "artefatti"; al modello
+arrivano solo anteprime e statistiche, cosi' i token restano contenuti anche su risultati grandi.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Callable
+
+import anthropic
+import pandas as pd
+
+from .charts import CHART_TYPES, build_chart
+from .data_store import DataStore
+from .export import sources_of
+from .retrieval import ReportIndex
+from .safety import SafetyLimits
+
+MAX_TOOL_ROUNDS = 10
+PREVIEW_ROWS = 40
+MAX_TOOL_CHARS = 9000
+
+TOOLS = [
+    {
+        "name": "query_data",
+        "description": (
+            "Esegue una query SQL (DuckDB, sola lettura, una sola SELECT/WITH) sull'INTERO dataset numerico: tabelle "
+            "`points`, `series`, `datasets`, `documents`. Usalo per ogni domanda quantitativa (valori, confronti, "
+            "filtri, aggregazioni, statistiche, regressioni con regr_slope ecc.). Restituisce un result_id, il numero "
+            "di righe, le colonne e un'anteprima. Il risultato completo e' disponibile per create_chart e, se "
+            "display=true, viene mostrato all'utente come tabella scaricabile (CSV/XLSX). Includi sempre le colonne "
+            "series_id e source_file quando estrai punti, per poter citare la fonte."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sql": {"type": "string", "description": "Query SELECT. Le stringhe vanno tra apici singoli."},
+                "title": {"type": "string", "description": "Titolo breve e descrittivo della tabella risultante."},
+                "display": {"type": "boolean", "description": "true se la tabella e' un risultato da mostrare all'utente; false per query esplorative/di supporto."},
+            },
+            "required": ["sql", "title", "display"],
+        },
+    },
+    {
+        "name": "create_chart",
+        "description": (
+            "Crea un grafico interattivo (Plotly) a partire da un risultato di query_data e lo mostra all'utente. "
+            "Usalo quando la domanda riguarda andamenti, confronti tra serie/esperimenti, relazioni o distribuzioni. "
+            "Un solo asse y: se le grandezze hanno unita' diverse usa `facet` (pannelli separati) o grafici distinti. "
+            "Usa `color` per distinguere le serie (max 8 categorie)."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "result_id": {"type": "string"},
+                "chart_type": {"type": "string", "enum": list(CHART_TYPES)},
+                "x": {"type": "string", "description": "Colonna asse x"},
+                "y": {"type": "string", "description": "Colonna asse y (non serve per histogram)"},
+                "color": {"type": "string", "description": "Colonna categorica per il colore/legenda"},
+                "facet": {"type": "string", "description": "Colonna per pannelli separati"},
+                "error_y": {"type": "string", "description": "Colonna con l'ampiezza della barra d'errore"},
+                "title": {"type": "string"},
+                "x_label": {"type": "string", "description": "Etichetta asse x con unita', in inglese, es. 'Pressure [atm]'"},
+                "y_label": {"type": "string", "description": "Etichetta asse y con unita', in inglese"},
+                "log_x": {"type": "boolean"},
+                "log_y": {"type": "boolean"},
+            },
+            "required": ["result_id", "chart_type", "x", "title"],
+        },
+    },
+    {
+        "name": "search_reports",
+        "description": (
+            "Ricerca ibrida (semantica + parole chiave) nei report PDF. Restituisce le pagine piu' pertinenti con "
+            "file, numero di pagina e sezione, per citare con precisione. Usa query in inglese (i report sono in "
+            "inglese) e specifiche; ripeti con formulazioni diverse se serve."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "experiment_tag": {"type": "string", "description": "Filtra per codice, es. PSI-117"},
+                "file_name": {"type": "string", "description": "Filtra su un singolo PDF"},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "read_report_pages",
+        "description": "Legge il testo integrale di un intervallo di pagine (max 8) di un report: usalo per sezioni/capitoli interi (vedi l'indice in get_document_overview) quando servono contesto completo, tabelle o derivazioni.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_name": {"type": "string"},
+                "start_page": {"type": "integer", "minimum": 1},
+                "end_page": {"type": "integer", "minimum": 1},
+            },
+            "required": ["file_name", "start_page", "end_page"],
+        },
+    },
+    {
+        "name": "get_document_overview",
+        "description": "Sommari strutturati, risultati chiave con pagine, condizioni sperimentali e indice delle sezioni dei report (e sintesi per esperimento PSI-XXX). Primo passo per domande di sintesi, panoramica o confronto tra documenti.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"experiment_tag": {"type": "string"}, "file_name": {"type": "string"}},
+        },
+    },
+    {
+        "name": "get_raw_table",
+        "description": "Restituisce la tabella ORIGINALE (formato largo, come nel file CSV/XLSX NASA) di un dataset, utile se l'utente chiede il file/tabella sorgente.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"dataset": {"type": "string"}, "display": {"type": "boolean"}},
+            "required": ["dataset", "display"],
+        },
+    },
+    {
+        "name": "suggest_explorer",
+        "description": (
+            "Indica all'utente cosa guardare nella sezione 'Esplora le serie' della Dashboard dati: un dataset (figura), "
+            "la grandezza sull'asse y e le serie piu' utili per approfondire la risposta. Chiamalo UNA volta per "
+            "domanda, insieme alla risposta finale. Usa solo dataset, y_var e series_id presenti nel catalogo."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset": {"type": "string", "description": "Nome del dataset (colonna `dataset`), es. come nel catalogo."},
+                "y_var": {"type": "string", "description": "Codice canonico della grandezza (y_var) da selezionare."},
+                "series_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 8,
+                               "description": "series_id da selezionare (max 8, tutti con questo dataset e y_var)."},
+                "log_x": {"type": "boolean"},
+                "log_y": {"type": "boolean"},
+                "reason": {"type": "string", "description": "1-2 frasi: cosa osservare nel grafico e perche' e' utile per la domanda."},
+            },
+            "required": ["dataset", "y_var", "series_ids", "reason"],
+        },
+    },
+]
+
+SAFETY_TOOLS = [
+    {
+        "name": "search_safety_norms",
+        "description": (
+            "Ricerca ibrida (semantica + parole chiave) nel database SEPARATO delle norme e dei documenti NASA di "
+            "sicurezza antincendio spaziale (NASA-STD-3001/OCHMO-TB-008, Fire Safety Applications for Spacecraft, "
+            "ECLS Fire Safety, incidente Mir, tecnologie di rilevazione/protezione). Usalo per requisiti, procedure, "
+            "limiti e contesto normativo. Query in inglese. Le pagine si leggono per intero con read_report_pages."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "file_name": {"type": "string", "description": "Filtra su un singolo PDF di sicurezza"},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "check_safety_compliance",
+        "description": (
+            "Confronta valori numerici con i limiti di sicurezza antincendio estratti dalle norme (catalogo SAF-xxx nel "
+            "prompt), con conversione automatica delle unita'. Tre modalita': (1) result_id di un risultato di "
+            "query_data: se ha le colonne y/y_var/y_unit (formato `points`) verifica ogni serie e grandezza, altrimenti "
+            "riconosce le colonne dal nome; (2) values + quantity + unit per valori espliciti; (3) nessun argomento: "
+            "verifica tutte le serie di simulazione/modello del dataset e le loro condizioni (x_o2, pressione). "
+            "Mostra all'utente una tabella con esito, margine e citazione per ogni limite."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "result_id": {"type": "string"},
+                "values": {"type": "array", "items": {"type": "number"}},
+                "quantity": {"type": "string", "description": "Grandezza, es. oxygen_concentration, x_o2, temperature, air_velocity, burn_length"},
+                "unit": {"type": "string", "description": "Unita' dei valori, es. %, fraction, K, °C, m/s, cm"},
+                "limit_ids": {"type": "array", "items": {"type": "string"}, "description": "Solo questi limiti (include anche quelli opzionali)"},
+                "include_all": {"type": "boolean", "description": "Includi anche i limiti ad ambito ristretto"},
+                "allow_proxy": {"type": "boolean", "description": "Consenti confronti indicativi con grandezze affini (es. flame_length vs burn_length)"},
+                "title": {"type": "string"},
+            },
+        },
+    },
+]
+
+SAFETY_PROMPT = """
+
+# Norme di sicurezza antincendio spaziale
+- Hai un database separato di norme e documenti NASA di sicurezza antincendio (`search_safety_norms`, pagine leggibili con `read_report_pages`) e un catalogo di limiti numerici verificati (sotto).
+- Quando l'utente chiede se valori, simulazioni o condizioni sperimentali rispettano le norme, usa `check_safety_compliance` (dopo `query_data` se servono dati specifici) e commenta esito e margine. Non fare tu i confronti a mente.
+- Distingui il tipo di limite: requisito normativo, riferimento di progetto, soglia sperimentale o capacita' di un dispositivo. Una "zona di rischio" non e' una violazione di norma: indica condizioni in cui l'incendio e' possibile o piu' pericoloso.
+- Per CO, HCN, HCl e altri gas tossici i documenti rimandano alle SMAC (JSC-20584), che non fanno parte del corpus: dichiaralo, non inventare soglie.
+- Citazioni dalle norme: [Source: SAFETY | nome_file.pdf, p. N]; per i limiti indica anche l'ID, es. (SAF-004).
+
+# Catalogo limiti di sicurezza (unita' canoniche)
+{safety_catalog}
+"""
+
+SYSTEM_TEMPLATE = """Sei l'assistente scientifico di "Flame in Freefall", piattaforma di analisi dei dati NASA Physical Science Informatics (PSI) sulla combustione in microgravita' (gocce isolate, cool flames, estinzione).
+
+# Come lavori
+- Hai accesso COMPLETO ai dati tramite gli strumenti: non basarti su memoria o supposizioni.
+- Domande quantitative (valori, confronti, filtri, "estrai una tabella", statistiche): usa `query_data` sul dataset completo; non stimare numeri dal testo dei report se esistono nei dati.
+- Andamenti, confronti tra serie o condizioni, distribuzioni: dopo `query_data` chiama `create_chart` con un grafico pertinente (etichette assi con unita').
+- Richieste di tabelle/estrazioni: `query_data` con display=true (l'utente potra' scaricarla in CSV/XLSX). Usa display=false per query esplorative.
+- Domande puramente teoriche o concettuali: rispondi dai report (`search_reports`, `read_report_pages`, `get_document_overview`) SENZA grafici o tabelle.
+- Domande di sintesi/panoramica: parti da `get_document_overview`: i risultati chiave li' riportati sono gia' estratti dal testo con le pagine e bastano per una sintesi. Usa `search_reports`/`read_report_pages` solo per verificare o approfondire punti specifici (al massimo 2-3 letture mirate), per contenere i token.
+- Se un dato richiesto non esiste (es. altri esperimenti PSI, velocita' di propagazione della fiamma al variare dell'O2), dichiaralo chiaramente e proponi l'analisi piu' vicina possibile con i dati disponibili. Non inventare mai valori.
+- Per OGNI domanda, insieme alla risposta finale, chiama `suggest_explorer` con il dataset, la grandezza (y_var) e le serie della sezione "Esplora le serie" che l'utente dovrebbe guardare per approfondire (anche per domande teoriche: scegli la figura piu' pertinente). Non ripetere il suggerimento nel testo: l'interfaccia lo mostra gia'. Salta solo se nessun dato tabellare e' minimamente pertinente.
+- I dati tabellari sono "figure data": valori digitalizzati/esportati dalle figure degli articoli citati (DOI nel catalogo); le serie di tipo model/simulation sono risultati numerici, non misure.
+
+# Citazioni (OBBLIGATORIE)
+- Ogni affermazione tratta dai report: [Source: PSI-XXX | nome_file.pdf, p. N]
+- Ogni valore tratto dai dati: [Data: PSI-XXX | nome_file.csv, series <series_id>] (aggiungi figura/DOI quando utile).
+- Scrivi SEMPRE il nome file completo ed esatto (non abbreviarlo, non "la tesi"), e il numero di pagina del PDF restituito dagli strumenti.
+- Usa solo file, pagine e serie effettivamente restituiti dagli strumenti.
+
+# Stile
+- Rispondi SEMPRE in inglese (l'interfaccia e' in inglese), anche se l'utente scrive in un'altra lingua, in Markdown conciso e tecnico.
+- Non usare mai emoji nelle risposte, nei titoli di tabelle o grafici e nelle etichette.
+- Titoli di tabelle e grafici ed etichette degli assi sempre in inglese.
+- Non ricopiare nel testo tabelle lunghe: l'interfaccia mostra gia' tabelle e grafici; commentali e riassumi i numeri chiave.
+- Unita' di misura sempre esplicite.
+
+# Suggerimenti SQL
+- Filtra per grandezza con `y_var`/`x_var` (codici canonici) e per serie con `series_id`; `kind` distingue experiment/model/simulation.
+- Esempio: SELECT series_id, series_label, kind, source_file, x AS pressure_atm, y AS dext_mm FROM points WHERE y_var = 'extinction_diameter_cool_flame' ORDER BY series_id, x
+- Per i grafici includi una colonna leggibile per `color` (es. series_label || ' (' || kind || ')').
+
+# Catalogo dati
+{catalog}
+"""
+
+
+@dataclass
+class ResultTable:
+    id: str
+    title: str
+    df: pd.DataFrame
+    sql: str | None
+    display: bool
+    truncated: bool = False
+
+    @property
+    def sources(self) -> list[str]:
+        return sources_of(self.df)
+
+
+@dataclass
+class ChartArtifact:
+    title: str
+    result_id: str
+    figure: object  # plotly Figure
+
+
+@dataclass
+class TurnArtifacts:
+    tables: dict[str, ResultTable] = field(default_factory=dict)
+    charts: list[ChartArtifact] = field(default_factory=list)
+    doc_hits: dict[tuple, dict] = field(default_factory=dict)  # (file, page) -> info
+    trace: list[dict] = field(default_factory=list)
+    explore: dict | None = None  # suggerimento principale del modello per "Esplora le serie"
+    explores: list[dict] = field(default_factory=list)  # guida per ogni figura/grandezza consultata
+
+    @property
+    def displayed_tables(self) -> list[ResultTable]:
+        return [t for t in self.tables.values() if t.display]
+
+    @property
+    def data_sources(self) -> list[str]:
+        out = set()
+        for t in self.tables.values():
+            out.update(t.sources)
+        return sorted(out)
+
+
+@dataclass
+class AgentResult:
+    text: str
+    artifacts: TurnArtifacts
+    stop_reason: str | None
+    usage: dict
+
+
+def _preview(df: pd.DataFrame) -> str:
+    with pd.option_context("display.max_columns", 30, "display.width", 250, "display.max_colwidth", 60):
+        head = df.head(PREVIEW_ROWS).to_string(index=False)
+        txt = f"{len(df)} righe x {df.shape[1]} colonne. Colonne: {list(df.columns)}\nAnteprima:\n{head}"
+        num = df.select_dtypes("number")
+        if len(df) > PREVIEW_ROWS and not num.empty:
+            txt += "\nStatistiche colonne numeriche:\n" + num.describe().T[["count", "mean", "min", "max"]].to_string()
+    return txt[:MAX_TOOL_CHARS]
+
+
+class FlameAgent:
+    def __init__(self, client: anthropic.Anthropic, store: DataStore, index: ReportIndex, model: str,
+                 effort: str | None = None, safety: SafetyLimits | None = None,
+                 safety_index: ReportIndex | None = None):
+        self.client, self.store, self.index, self.model, self.effort = client, store, index, model, effort
+        self.safety, self.safety_index = safety, safety_index
+        text = SYSTEM_TEMPLATE.format(catalog=store.catalog_text)
+        self.tools = list(TOOLS)
+        if safety is not None and safety_index is not None:
+            self.tools += SAFETY_TOOLS
+            text += SAFETY_PROMPT.format(safety_catalog=safety.catalog_text())
+        self.system = [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    def _resolve_any(self, name: str) -> tuple[str | None, ReportIndex]:
+        """Cerca il file prima tra i report PSI, poi tra i documenti di sicurezza."""
+        fname = self.index.resolve_file(name)
+        if fname or self.safety_index is None:
+            return fname, self.index
+        return self.safety_index.resolve_file(name), self.safety_index
+
+    # ----------------------------------------------------------------- tools
+    def _run_tool(self, name: str, args: dict, art: TurnArtifacts) -> str:
+        if name == "query_data":
+            res = self.store.query(args["sql"])
+            rid = f"R{len(art.tables) + 1}"
+            art.tables[rid] = ResultTable(rid, args.get("title") or rid, res.df, args["sql"], bool(args.get("display", True)), res.truncated)
+            note = " (TRONCATO al limite di righe)" if res.truncated else ""
+            return f"result_id={rid}{note}. " + _preview(res.df)
+        if name == "create_chart":
+            t = art.tables.get(args["result_id"])
+            if t is None:
+                raise ValueError(f"result_id sconosciuto: {args['result_id']}. Disponibili: {list(art.tables)}")
+            fig = build_chart(t.df, args["chart_type"], args["x"], args.get("y"), color=args.get("color"),
+                              facet=args.get("facet"), title=args.get("title"), x_label=args.get("x_label"),
+                              y_label=args.get("y_label"), log_x=bool(args.get("log_x")), log_y=bool(args.get("log_y")),
+                              error_y=args.get("error_y"))
+            art.charts.append(ChartArtifact(args.get("title") or t.title, t.id, fig))
+            return f"Grafico creato e mostrato all'utente ({args['chart_type']}, {len(t.df)} punti)."
+        if name == "search_reports":
+            fname = args.get("file_name")
+            if fname:
+                fname = self.index.resolve_file(fname) or fname
+            hits = self.index.search(args["query"], experiment_tag=args.get("experiment_tag") or None,
+                                     file_name=fname, top_k=int(args.get("top_k") or 6))
+            if not hits:
+                return "Nessun risultato. Prova un'altra formulazione (in inglese) o rimuovi i filtri."
+            blocks = []
+            for h in hits:
+                art.doc_hits.setdefault((h.file_name, h.page_number), {"tag": h.experiment_tag, "section": h.section, "text": h.text})
+                blocks.append(f"{h.citation} | sezione: {h.section or 'n/d'} | match: {h.matched_by}\n{h.text}")
+            return "\n\n---\n\n".join(blocks)[:MAX_TOOL_CHARS * 2]
+        if name == "read_report_pages":
+            fname, idx = self._resolve_any(args["file_name"])
+            if not fname:
+                files = self.index.pages.file_name.unique().tolist()
+                if self.safety_index is not None:
+                    files += self.safety_index.pages.file_name.unique().tolist()
+                raise ValueError(f"File non trovato: {args['file_name']}. File: {files}")
+            g = idx.read_pages(fname, int(args["start_page"]), int(args["end_page"]))
+            if g.empty:
+                raise ValueError("Nessuna pagina in questo intervallo.")
+            out = []
+            for r in g.itertuples():
+                art.doc_hits.setdefault((r.file_name, int(r.page_number)), {"tag": r.experiment_tag, "section": r.section, "text": r.text})
+                out.append(f"[Source: {r.experiment_tag} | {r.file_name}, p. {r.page_number}] section: {r.section or 'n/a'}\n{r.text}")
+            return "\n\n---\n\n".join(out)[:24000]
+        if name == "get_document_overview":
+            fname = args.get("file_name")
+            if fname:
+                fname = self.index.resolve_file(fname) or fname
+            return self.store.document_overview(args.get("experiment_tag") or None, fname)[:20000]
+        if name == "get_raw_table":
+            ds = args["dataset"]
+            df = self.store.raw_table(ds)
+            src = self.store.datasets.loc[self.store.datasets.dataset == ds, "source_file"]
+            df.insert(0, "source_file", src.iloc[0] if len(src) else ds)
+            rid = f"R{len(art.tables) + 1}"
+            art.tables[rid] = ResultTable(rid, f"Tabella originale — {ds}", df, None, bool(args.get("display", True)))
+            return f"result_id={rid}. " + _preview(df)
+        if name == "suggest_explorer":
+            s = self.store.series
+            ds = s[s.dataset == args["dataset"]]
+            if ds.empty:
+                raise ValueError(f"Dataset sconosciuto o senza serie: {args['dataset']}. Disponibili: {sorted(s.dataset.unique())}")
+            if ds[ds.y_var == args["y_var"]].empty:
+                raise ValueError(f"y_var '{args['y_var']}' non presente in {args['dataset']}. Disponibili: {sorted(ds.y_var.unique())}")
+            art.explore = self._explore(args["dataset"], args["y_var"], args.get("series_ids") or [],
+                                        bool(args.get("log_x")), bool(args.get("log_y")), args.get("reason", ""))
+            return f"Suggerimento registrato e mostrato all'utente ({len(art.explore['series_ids'])} serie)."
+        if name == "search_safety_norms" and self.safety_index is not None:
+            fname = args.get("file_name")
+            if fname:
+                fname = self.safety_index.resolve_file(fname) or fname
+            hits = self.safety_index.search(args["query"], file_name=fname, top_k=int(args.get("top_k") or 6))
+            if not hits:
+                return "Nessun risultato nelle norme. Prova un'altra formulazione (in inglese)."
+            blocks = []
+            for h in hits:
+                art.doc_hits.setdefault((h.file_name, h.page_number), {"tag": h.experiment_tag, "section": h.section, "text": h.text})
+                blocks.append(f"{h.citation} | sezione: {h.section or 'n/d'} | match: {h.matched_by}\n{h.text}")
+            return "\n\n---\n\n".join(blocks)[:MAX_TOOL_CHARS * 2]
+        if name == "check_safety_compliance" and self.safety is not None:
+            return self._check_safety(args, art)
+        raise ValueError(f"Strumento sconosciuto: {name}")
+
+    def _check_safety(self, args: dict, art: TurnArtifacts) -> str:
+        opts = {"limit_ids": args.get("limit_ids") or None, "include_all": bool(args.get("include_all")),
+                "allow_proxy": bool(args.get("allow_proxy"))}
+        if args.get("result_id"):
+            t = art.tables.get(args["result_id"])
+            if t is None:
+                raise ValueError(f"result_id sconosciuto: {args['result_id']}. Disponibili: {list(art.tables)}")
+            res, what = self.safety.check_any(t.df, **opts), f"risultato {t.id} ('{t.title}')"
+        elif args.get("values"):
+            if not args.get("quantity"):
+                raise ValueError("Con `values` servono anche `quantity` e (consigliato) `unit`.")
+            res = self.safety.check(args["values"], args["quantity"], args.get("unit"), label=args["quantity"], **opts)
+            what = f"{len(args['values'])} valori di {args['quantity']}"
+        else:
+            res, what = self.safety.check_store(self.store, **opts), "tutte le serie di simulazione/modello"
+        if res.empty:
+            return (f"Nessuna grandezza di {what} corrisponde a un limite del catalogo (grandezze verificabili: "
+                    f"{sorted(self.safety.limits.parameter.unique())}). Se una colonna e' equivalente, ripeti con "
+                    "values+quantity+unit oppure allow_proxy=true.")
+        cols = [c for c in ("label", "source", "column", "parameter", "limit_id", "limit", "limit_type", "n_values",
+                            "value_min", "value_max", "n_violations", "worst_value", "margin", "esito", "confronto",
+                            "unit_note", "citation") if c in res.columns]
+        res = res[cols]
+        rid = f"R{len(art.tables) + 1}"
+        art.tables[rid] = ResultTable(rid, args.get("title") or f"Verifica norme antincendio — {what}", res, None, True)
+        summary = res.groupby(["limit_id", "esito"]).size().rename("n").reset_index().to_string(index=False)
+        return f"result_id={rid} (mostrato all'utente). Verificato: {what}.\nRiepilogo per limite:\n{summary}\n\n" + _preview(res)
+
+    def _explore(self, dataset: str, y_var: str, series_ids: list[str], log_x: bool, log_y: bool, reason: str) -> dict:
+        """Suggerimento per 'Esplora le serie', con i testi esatti mostrati nei menu della dashboard."""
+        s, d = self.store.series, self.store.datasets
+        sel = s[(s.dataset == dataset) & (s.y_var == y_var)]
+        ids = [i for i in series_ids if i in set(sel.series_id)][:8] or sel.series_id.head(8).tolist()
+        info = d[d.dataset == dataset].iloc[0] if (d.dataset == dataset).any() else None
+        fig = (f"{info.figure or ''}" + (f" ({info.journal} {info.year})" if info is not None and info.journal else "")) if info is not None else ""
+        return {"dataset": dataset, "experiment_tag": str(sel.experiment_tag.iloc[0]), "figure": fig.strip(),
+                "y_var": y_var, "y_description": str(sel.y_description.iloc[0] or y_var),
+                "series_ids": ids, "series_labels": sel.set_index("series_id").loc[ids, "series_label"].tolist(),
+                "log_x": log_x, "log_y": log_y, "reason": reason}
+
+    def _consulted_explores(self, art: TurnArtifacts, limit: int = 5) -> list[dict]:
+        """Una guida per ogni (figura, grandezza) consultata: prima il suggerimento del modello, poi le serie
+        comparse nei risultati delle query e nelle tabelle originali richieste."""
+        s = self.store.series
+        ids, raw_ds = [], []
+        for t in art.tables.values():
+            if "series_id" in t.df.columns:
+                ids += t.df.series_id.dropna().astype(str).unique().tolist()
+            elif t.sql is None and t.title.startswith("Tabella originale — "):
+                raw_ds.append(t.title.removeprefix("Tabella originale — "))
+        ids = list(dict.fromkeys(ids))
+        hit = s[s.series_id.isin(ids)]
+        groups = list(hit.groupby(["dataset", "y_var"], sort=False).groups)
+        groups += [(d, s[s.dataset == d].y_var.value_counts().index[0]) for d in raw_ds if (s.dataset == d).any()]
+        out = [art.explore] if art.explore else []
+        seen = {(e["dataset"], e["y_var"]) for e in out}
+        for ds, yv in groups:
+            if (ds, yv) in seen or len(out) >= limit:
+                continue
+            seen.add((ds, yv))
+            chosen = [i for i in ids if i in set(hit[(hit.dataset == ds) & (hit.y_var == yv)].series_id)]
+            out.append(self._explore(ds, yv, chosen, False, False, "Data consulted by the assistant for this answer."))
+        return out
+
+    @staticmethod
+    def _describe(name: str, args: dict) -> str:
+        return {
+            "query_data": lambda: f"Data query: {args.get('title', '')}",
+            "create_chart": lambda: f"Chart: {args.get('title', '')}",
+            "search_reports": lambda: f"Searching the reports: “{args.get('query', '')}”",
+            "read_report_pages": lambda: f"Reading {args.get('file_name', '')[:50]} pp. {args.get('start_page')}–{args.get('end_page')}",
+            "get_document_overview": lambda: "Report summaries and tables of contents",
+            "get_raw_table": lambda: f"Original table {args.get('dataset', '')}",
+            "suggest_explorer": lambda: f"Suggested view in the Data tab: {args.get('dataset', '')}",
+            "search_safety_norms": lambda: f"Searching the safety standards: “{args.get('query', '')}”",
+            "check_safety_compliance": lambda: "Fire safety standards compliance check",
+        }.get(name, lambda: name)()
+
+    # ------------------------------------------------------------------ loop
+    def run(self, history: list[dict], user_text: str, experiment_filter: str | None = None,
+            on_event: Callable[[str], None] | None = None) -> AgentResult:
+        art = TurnArtifacts()
+        note = (f"\n\n[Filtro attivo nell'interfaccia: {experiment_filter}. Limita la ricerca a questo esperimento salvo "
+                f"richiesta esplicita di confronto.]") if experiment_filter else ""
+        messages = list(history) + [{"role": "user", "content": user_text + note}]
+        usage = {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+        extra = {"output_config": {"effort": self.effort}} if self.effort else {}
+        response = None
+        last_text = ""  # testo scritto insieme all'ultima chiamata di strumenti (es. risposta + suggest_explorer)
+        for _ in range(MAX_TOOL_ROUNDS):
+            response = self.client.messages.create(
+                model=self.model, max_tokens=16000, system=self.system, tools=self.tools, messages=messages, **extra)
+            for k in usage:
+                usage[k] += getattr(response.usage, k, 0) or 0
+            if response.stop_reason != "tool_use":
+                break
+            last_text = "\n".join(b.text for b in response.content if b.type == "text").strip() or last_text
+            messages.append({"role": "assistant", "content": response.content})
+            results = []
+            for block in response.content:
+                if block.type != "tool_use":
+                    continue
+                args = block.input if isinstance(block.input, dict) else json.loads(block.input or "{}")
+                desc = self._describe(block.name, args)
+                if on_event:
+                    on_event(desc)
+                try:
+                    out = self._run_tool(block.name, args, art)
+                    art.trace.append({"tool": block.name, "label": desc, "input": args, "ok": True})
+                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": out})
+                except Exception as e:  # l'errore torna al modello, che puo' correggersi (es. SQL)
+                    art.trace.append({"tool": block.name, "label": desc, "input": args, "ok": False, "error": str(e)})
+                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": f"Error: {e}", "is_error": True})
+            messages.append({"role": "user", "content": results})
+        text = "\n".join(b.text for b in (response.content if response else []) if b.type == "text").strip()
+        stop = response.stop_reason if response else None
+        if stop == "end_turn" and len(text) < 40 and len(last_text) > len(text):
+            text = (last_text + ("\n\n" + text if text else "")).strip()
+        art.explores = self._consulted_explores(art)
+        if stop == "refusal":
+            text = "The model cannot process this request. Try rephrasing it."
+        elif stop == "tool_use":
+            text = (text + "\n\n" if text else "") + "Analysis stopped: the maximum number of steps was reached. Try narrowing the question."
+        elif stop == "max_tokens":
+            text += "\n\nAnswer truncated because of its length."
+        return AgentResult(text or "_(no text answer)_", art, stop, usage)
+
+    @staticmethod
+    def history_entry(result: AgentResult) -> str:
+        """Testo dell'assistente salvato nella cronologia, con un promemoria compatto degli artefatti
+        (permette domande di follow-up senza reinviare i dati)."""
+        notes = [f"{t.id} '{t.title}' ({len(t.df)} righe) SQL: {t.sql}" for t in result.artifacts.tables.values() if t.sql]
+        notes += [f"grafico '{c.title}' da {c.result_id}" for c in result.artifacts.charts]
+        return result.text + ("\n\n[Artefatti del turno precedente: " + " | ".join(notes) + "]" if notes else "")
