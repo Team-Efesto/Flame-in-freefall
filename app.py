@@ -22,6 +22,7 @@ KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "S
 TAB_CHAT = "💬 Assistente IA"
 TAB_DASH = "📊 Dashboard dati"
 TAB_PSI = "🪐 Simulatore PSI (g/g_e)"
+TAB_MPH = "🌙 Modulo Lunare MPH (0.165 g_e)"
 TAB_DOCS = "📚 Report scientifici"
 
 TAB_SAFETY = "🛡️ Norme di sicurezza"
@@ -31,6 +32,10 @@ ESITO_ICON = {"conforme": "✅ conforme", "non conforme": "❌ non conforme",
 HTML_DASHBOARD_FILE = Path(__file__).parent / "dashboard_psi.html"
 with open(HTML_DASHBOARD_FILE, "r", encoding="utf-8") as f:
     PSI_DASHBOARD_HTML = f.read()
+
+HTML_MPH_FILE = Path(__file__).parent / "dashboard_mph.html"
+with open(HTML_MPH_FILE, "r", encoding="utf-8") as f:
+    MPH_DASHBOARD_HTML = f.read()
 
 # --------------------------------------------------------------------------- stile NASA PSI
 st.markdown("""
@@ -189,6 +194,11 @@ if st.sidebar.button("🪐 Apri Simulatore PSI (g/g_e)", width="stretch"):
     st.session_state.panel_open = True
     st.session_state.panel_wide = True
     st.session_state.main_tab = TAB_PSI
+    st.rerun()
+if st.sidebar.button("🌙 Apri Simulatore Artemis MPH", width="stretch"):
+    st.session_state.panel_open = True
+    st.session_state.panel_wide = True
+    st.session_state.main_tab = TAB_MPH
     st.rerun()
 if st.sidebar.button("🗑️ Nuova conversazione", width="stretch"):
     st.session_state.messages, st.session_state.api_history = [], []
@@ -393,7 +403,9 @@ with side_panel:
     h1.markdown("#### 🔬 Dati, simulazioni e report")
     h2.button("⛶ Espandi" if not st.session_state.get("panel_wide") else "🗗 Riduci", key="panel_wide_btn", on_click=toggle_wide, width="stretch")
     h3.button("✕ Chiudi", key="panel_close_btn", on_click=toggle_panel, width="stretch")
-    tab_dash, tab_psi, tab_docs, tab_safety = st.tabs([TAB_DASH, TAB_PSI, TAB_DOCS, TAB_SAFETY], key="main_tab", on_change="rerun")
+    tab_dash, tab_psi, tab_mph, tab_docs, tab_safety = st.tabs(
+        [TAB_DASH, TAB_PSI, TAB_MPH, TAB_DOCS, TAB_SAFETY], key="main_tab", on_change="rerun"
+    )
 
 with tab_dash:
     series_f, points_f, ds_f = filt(store.series), filt(store.points), filt(store.datasets)
@@ -484,6 +496,12 @@ with tab_psi:
     st.markdown("### 🪐 Laboratorio NASA PSI • Mappe Interattive & Simulazioni Parametriche ($g / g_e$)")
     st.caption("Simulatore parametrico multi-esperimento basato sul Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
     components.html(PSI_DASHBOARD_HTML, height=1150, scrolling=True)
+
+# ============================== MODULO LUNARE MPH (0.165 g_e) ==============================
+with tab_mph:
+    st.markdown("### 🌙 Artemis MPH • Simulatore Propagazione Incendio in Gravità Lunare ($0.165\\,g_e$)")
+    st.caption("Simulatore aerospaziale multifisico per il modulo abitativo lunare pressurizzato (Multi-Purpose Habitat).")
+    components.html(MPH_DASHBOARD_HTML, height=1150, scrolling=True)
 
 # ============================== REPORT ==============================
 with tab_docs:
