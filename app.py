@@ -1,66 +1,101 @@
 import json
+from pathlib import Path
 
 import anthropic
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from flame.agent import FlameAgent
 from flame.charts import series_chart
-from flame.config import DEFAULT_MODEL
+from flame.config import DEFAULT_MODEL, SAFETY_COLLECTION, SAFETY_DIR, SAFETY_VECTOR_DB_DIR
 from flame.data_store import DataStore
 from flame.export import safe_filename, to_csv_bytes, to_xlsx_bytes
 from flame.retrieval import ReportIndex
+from flame.safety import SafetyLimits, format_limit
 
 st.set_page_config(page_title="Flame in Freefall - NASA PSI", page_icon="🔥", layout="wide")
 
 ALL = "Tutti gli esperimenti"
 KIND_LABELS = {"experiment": "Esperimento", "model": "Modello", "simulation": "Simulazione", "unspecified": "Non specificato"}
-TAB_CHAT, TAB_DASH, TAB_DOCS, TAB_SIM = "💬 Assistente IA", "📊 Dashboard dati", "📚 Report scientifici", "🧪 Simulatore & test"
-SIM_CONFIGS = [
-    "Tessuto SIBAL (75% cotone/25% vetro) - Flusso Concorrente Ascendente (T'ien, GMT-T)",
-    "Film sottile PMMA (100-400 um) - Flusso Opposto Discendente (Bhattacharjee, B)",
-    "Lastra spessa PMMA (1-5 mm) - Flusso Opposto Discendente (Miller, M)",
-    "Cilindro PMMA (6.35-12.7 mm) - Flusso Opposto Discendente (Fernandez-Pello, P)",
-    "Cilindro PMMA (6.35-12.7 mm) - Ristagno Concorrente Assiale (Olson/Ferkul, 0)",
-]
 
-# --------------------------------------------------------------------------- stile
+TAB_CHAT = "💬 Assistente IA"
+TAB_DASH = "📊 Dashboard dati"
+TAB_PSI = "🪐 Simulatore PSI (g/g_e)"
+TAB_DOCS = "📚 Report scientifici"
+
+TAB_SAFETY = "🛡️ Norme di sicurezza"
+ESITO_ICON = {"conforme": "✅ conforme", "non conforme": "❌ non conforme",
+              "fuori zona di rischio": "✅ fuori zona di rischio", "in zona di rischio": "⚠️ in zona di rischio"}
+
+HTML_DASHBOARD_FILE = Path(__file__).parent / "dashboard_psi.html"
+with open(HTML_DASHBOARD_FILE, "r", encoding="utf-8") as f:
+    PSI_DASHBOARD_HTML = f.read()
+
+# --------------------------------------------------------------------------- stile NASA PSI
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
 <style>
 .stApp {
-    background:
-        radial-gradient(1200px 500px at 85% -10%, rgba(255,107,44,0.12), transparent 60%),
-        radial-gradient(900px 400px at -10% 110%, rgba(64,120,255,0.10), transparent 60%),
-        #0B0F1A;
+    background-color: #0b1120;
+    background-image:
+        linear-gradient(to right, rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, sans-serif;
 }
-.block-container { padding-top: 2.5rem; max-width: 1280px; }
+::selection {
+    background: rgba(56, 189, 248, 0.3);
+    color: #bae6fd;
+}
+.block-container { padding-top: 2.2rem; max-width: 1320px; }
 .hero {
-    padding: 1.8rem 2.2rem; border-radius: 16px; border: 1px solid #232B42; margin-bottom: 1.2rem;
-    background: linear-gradient(135deg, rgba(255,107,44,0.14) 0%, rgba(20,26,43,0.9) 45%, rgba(20,26,43,0.9) 100%);
+    padding: 1.8rem 2.2rem; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 1.2rem;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(17, 24, 39, 0.95) 45%, rgba(15, 23, 42, 0.95) 100%);
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
 }
-.hero-kicker { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #FF9A5C; margin-bottom: 0.5rem; }
+.hero-kicker {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #38bdf8; margin-bottom: 0.6rem; display: inline-block;
+    padding: 0.2rem 0.65rem; border-radius: 6px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35);
+}
 .hero h1 {
-    margin: 0 0 0.6rem 0; padding: 0; font-size: 2.3rem; line-height: 1.15;
-    background: linear-gradient(90deg, #FFD3A8, #FF6B2C 55%, #FF3D3D);
+    margin: 0 0 0.6rem 0; padding: 0; font-size: 2.3rem; font-weight: 800; line-height: 1.15;
+    background: linear-gradient(90deg, #ffffff, #38bdf8 55%, #818cf8);
     -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-family: 'Inter', sans-serif;
 }
-.hero p { margin: 0; color: #A9B3C9; font-size: 1.02rem; max-width: 820px; }
-section[data-testid="stSidebar"] { background: #0F1422; border-right: 1px solid #232B42; }
-div[data-testid="stExpander"] details { border: 1px solid #232B42; border-radius: 12px; background: rgba(20,26,43,0.6); }
-div[data-testid="stExpander"] summary:hover { color: #FF9A5C; }
-div[data-testid="stChatMessage"] { border: 1px solid #232B42; border-radius: 14px; background: rgba(20,26,43,0.55); padding: 1rem 1.2rem; }
-div[data-testid="stChatInput"] > div { border-radius: 14px; border-color: #2E3856; }
-div[data-testid="stChatInput"] > div:focus-within { border-color: #FF6B2C; box-shadow: 0 0 0 3px rgba(255,107,44,0.18); }
-div[data-testid="stMetric"] { border: 1px solid #232B42; border-radius: 12px; background: rgba(20,26,43,0.6); padding: 0.8rem 1rem; }
-div[data-testid="stMetricValue"] { color: #FFD3A8; }
-.st-key-kpi_row { margin-bottom: 1.6rem; }
-.st-key-kpi_row div[data-testid="stMetric"] { border-top: 2px solid #FF6B2C; }
-.card { border: 1px solid #232B42; border-radius: 12px; background: rgba(20,26,43,0.6); padding: 1rem 1.2rem; margin-bottom: 0.8rem; }
-.pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; border: 1px solid #2E3856; color: #A9B3C9; font-size: 0.78rem; margin: 0 0.3rem 0.3rem 0; }
-.page-text { white-space: pre-wrap; font-size: 0.88rem; color: #C9D1E3; max-height: 520px; overflow-y: auto;
-             border: 1px solid #232B42; border-radius: 10px; padding: 0.9rem 1rem; background: rgba(11,15,26,0.6); }
-hr { border-color: #232B42 !important; }
-code { color: #FFB27D !important; background: rgba(255,107,44,0.10) !important; border-radius: 6px; }
+
+.hero p { margin: 0; color: #94a3b8; font-size: 0.98rem; max-width: 860px; line-height: 1.5; }
+section[data-testid="stSidebar"] { background: #0b1120; border-right: 1px solid #1e293b; }
+div[data-testid="stExpander"] details { border: 1px solid #1e293b; border-radius: 12px; background: #111827; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4); }
+div[data-testid="stExpander"] summary { font-family: 'Inter', sans-serif; color: #e2e8f0; font-weight: 600; }
+div[data-testid="stExpander"] summary:hover { color: #38bdf8; }
+div[data-testid="stChatMessage"] { border: 1px solid #1e293b; border-radius: 14px; background: #111827; padding: 1rem 1.2rem; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4); }
+div[data-testid="stChatInput"] > div { border-radius: 14px; border-color: #1e293b; background: #111827; color: #e2e8f0; }
+div[data-testid="stChatInput"] > div:focus-within { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.25); }
+div[data-testid="stMetric"] { border: 1px solid #1e293b; border-radius: 12px; background: #111827; padding: 0.8rem 1rem; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4); }
+div[data-testid="stMetricValue"] { color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+div[data-testid="stMetricLabel"] { color: #94a3b8; font-family: 'Inter', sans-serif; font-size: 0.78rem; }
+.card { border: 1px solid #1e293b; border-radius: 12px; background: #111827; padding: 1rem 1.2rem; margin-bottom: 0.8rem; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.4); }
+.pill { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.12); color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; margin: 0 0.3rem 0.3rem 0; }
+.page-text { white-space: pre-wrap; font-size: 0.86rem; color: #cbd5e1; max-height: 520px; overflow-y: auto;
+             border: 1px solid #1e293b; border-radius: 10px; padding: 0.9rem 1rem; background: #070b14; font-family: 'JetBrains Mono', monospace; }
+hr { border-color: #1e293b !important; }
+code { color: #38bdf8 !important; background: rgba(56,189,248,0.12) !important; border: 1px solid rgba(56,189,248,0.25) !important; border-radius: 6px; font-family: 'JetBrains Mono', monospace !important; }
+button[data-baseweb="tab"] { font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 600; color: #94a3b8 !important; }
+button[data-baseweb="tab"]:hover { color: #e2e8f0 !important; }
+button[data-baseweb="tab"][aria-selected="true"] { color: #38bdf8 !important; border-bottom: 2px solid #38bdf8 !important; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #0b1120; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+
 #MainMenu, footer { visibility: hidden; }
 /* indicatore di caricamento: icone spaziali al posto degli omini di Streamlit */
 [data-testid="stStatusWidgetRunningManIcon"], [data-testid="stStatusWidgetNewYearsIcon"] { display: none !important; }
@@ -99,6 +134,17 @@ def load_store() -> DataStore:
 @st.cache_resource(show_spinner="Caricamento indice dei report…")
 def load_index(_store: DataStore) -> ReportIndex:
     return ReportIndex(_store.pages)
+
+
+@st.cache_resource(show_spinner="Caricamento norme di sicurezza…")
+def load_safety() -> tuple[SafetyLimits | None, ReportIndex | None, str | None]:
+    """Limiti + indice delle norme antincendio; l'app funziona anche se il database non e' stato generato."""
+    try:
+        limits = SafetyLimits()
+        pages = pd.read_parquet(SAFETY_DIR / "safety_pages.parquet")
+        return limits, ReportIndex(pages, SAFETY_VECTOR_DB_DIR, collection=SAFETY_COLLECTION), None
+    except Exception as e:  # es. build_safety_db.py non ancora eseguito
+        return None, None, str(e)
 
 
 def secret(name: str, default=None):
@@ -144,6 +190,7 @@ def download_buttons(df: pd.DataFrame, title: str, key: str, meta: dict | None =
 
 store = load_store()
 index = load_index(store)
+safety, safety_index, safety_error = load_safety()
 ds_info = store.datasets.set_index("source_file")
 
 # --------------------------------------------------------------------------- sidebar
@@ -155,6 +202,11 @@ tag = None if selected_tag == ALL else selected_tag
 api_key = secret("ANTHROPIC_API_KEY")
 model = secret("ANTHROPIC_MODEL", DEFAULT_MODEL)
 st.sidebar.divider()
+if st.sidebar.button("🪐 Apri Simulatore PSI (g/g_e)", width="stretch"):
+    st.session_state.panel_open = True
+    st.session_state.panel_wide = True
+    st.session_state.main_tab = TAB_PSI
+    st.rerun()
 if st.sidebar.button("🗑️ Nuova conversazione", width="stretch"):
     st.session_state.messages, st.session_state.api_history = [], []
     st.rerun()
@@ -253,6 +305,7 @@ def to_message(result) -> dict:
 
 # --------------------------------------------------------------------------- layout: chat al centro + pannello laterale a scomparsa
 st.session_state.setdefault("panel_open", False)
+st.session_state.setdefault("panel_wide", False)
 
 
 def open_panel(tab: str):
@@ -264,51 +317,40 @@ def close_panel():
     st.session_state.panel_open = False
 
 
+def toggle_wide():
+    st.session_state.panel_wide = not st.session_state.get("panel_wide", False)
+
+
 # Il pannello e' sempre renderizzato (cosi' grafici e selezioni restano pronti) ma, se chiuso, viene spostato fuori schermo.
-# Da aperto, uno sfondo cliccabile copre la chat: un clic fuori dal pannello lo chiude.
+
+panel_w_css = "min(1680px, 96vw)" if st.session_state.get("panel_wide") else "min(880px, 62vw)"
+
+
 st.markdown(f"""
 <style>
 .st-key-chat_area {{ max-width: 1000px; margin: 0 auto; }}
 div[data-testid="stBottomBlockContainer"] {{ max-width: 1000px; margin: 0 auto; padding-bottom: 1.4rem; }}
-div[data-testid="stBottom"] > div {{ background: #0B0F1A; }}
+div[data-testid="stBottom"] > div {{ background: #0b1120; }}
 .st-key-side_panel {{
-    position: fixed; top: 0; right: 0; height: 100vh; width: min(760px, 52vw); z-index: 999990;
+    position: fixed; top: 0; right: 0; height: 100vh; width: {panel_w_css}; z-index: 999990;
     overflow-y: auto; overflow-x: hidden; padding: 4.2rem 1.6rem 2rem 1.6rem; gap: 0.6rem;
-    background: #0F1422; border-left: 1px solid #232B42; box-shadow: -18px 0 40px rgba(0,0,0,0.5);
-    transition: transform 0.25s ease, visibility 0.25s;
+    background: #0f172a; border-left: 1px solid #1e293b; box-shadow: -18px 0 40px rgba(0,0,0,0.6);
+    transition: transform 0.25s ease, visibility 0.25s, width 0.25s ease;
     {"" if st.session_state.panel_open else "transform: translateX(105%); visibility: hidden;"}
 }}
-.st-key-panel_launchers {{ margin: -0.2rem 0 1.4rem 0; }}
-.st-key-panel_launchers button {{
-    background: rgba(20,26,43,0.92); border: 1px solid #2E3856; border-radius: 12px; padding: 0.7rem 1rem; font-size: 1.02rem;
+.st-key-panel_open_btn {{ position: fixed; top: 4.2rem; right: 1.2rem; z-index: 999989; width: auto !important; }}
+.st-key-panel_open_btn button {{
+    box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35); border-color: #38bdf8;
+    background: #111827; color: #38bdf8; font-weight: 600;
 }}
-.st-key-panel_launchers button:hover {{ border-color: #FF6B2C; color: #FF9A5C; }}
-.st-key-panel_backdrop {{ position: fixed; inset: 0; z-index: 999980; }}
-.st-key-panel_backdrop button {{
-    position: fixed; inset: 0; width: 100vw; height: 100vh; min-height: 100vh; border: none; border-radius: 0;
-    background: rgba(5,8,15,0.55); color: transparent; cursor: pointer; box-shadow: none;
-}}
-.st-key-panel_backdrop button:hover, .st-key-panel_backdrop button:focus, .st-key-panel_backdrop button:active {{
-    background: rgba(5,8,15,0.55); color: transparent; border: none; box-shadow: none;
-}}
-.st-key-panel_close_btn button {{ border: none; background: transparent; font-size: 1.3rem; padding: 0 0.5rem; }}
-.st-key-panel_close_btn button:hover {{ color: #FF6B2C; }}
-@media (max-width: 900px) {{
-    .st-key-side_panel {{ width: 100vw; padding: 4rem 16px 2rem 16px; }}
-}}
+.st-key-panel_open_btn button:hover {{ background: rgba(56, 189, 248, 0.15); border-color: #7dd3fc; }}
+@media (max-width: 900px) {{ .st-key-side_panel {{ width: 100vw !important; padding: 4rem 16px 2rem 16px; }} }}
 </style>
 """, unsafe_allow_html=True)
 
-if st.session_state.panel_open:
-    with st.container(key="panel_backdrop"):
-        st.button("Chiudi pannello", key="panel_backdrop_btn", on_click=close_panel)
-
-# pulsanti delle sezioni subito sotto il banner principale
-with nav_slot:
-    with st.container(key="panel_launchers", horizontal=True, gap="medium"):
-        st.button(TAB_DASH, key="open_dash_btn", on_click=open_panel, args=(TAB_DASH,), width="stretch")
-        st.button(TAB_DOCS, key="open_docs_btn", on_click=open_panel, args=(TAB_DOCS,), width="stretch")
-        st.button(TAB_SIM, key="open_sim_btn", on_click=open_panel, args=(TAB_SIM,), width="stretch")
+if not st.session_state.panel_open:
+    with st.container(key="panel_open_btn"):
+        st.button("📊 Dashboard, simulatore e report", on_click=toggle_panel, type="primary")
 
 # ============================== ASSISTENTE ==============================
 # chat_input al livello principale: Streamlit lo fissa in fondo allo schermo, indipendente dallo scorrimento.
@@ -362,7 +404,7 @@ with st.container(key="chat_area"):
 
     if query and api_key:
         agent = FlameAgent(get_client(api_key, secret("ANTHROPIC_WORKSPACE_ID")), store, index, model,
-                           effort=secret("ANTHROPIC_EFFORT"))
+                           effort=secret("ANTHROPIC_EFFORT"), safety=safety, safety_index=safety_index)
         st.session_state.messages.append({"role": "user", "content": query})
         with chat_box:
             with st.chat_message("user"):
@@ -401,12 +443,13 @@ with st.container(key="chat_area"):
 # ============================== PANNELLO LATERALE ==============================
 side_panel = st.container(key="side_panel")
 with side_panel:
-    h1, h2 = st.columns([6, 1], vertical_alignment="center")
-    h1.markdown("#### 🔬 Dati e report")
-    h2.button("✕", key="panel_close_btn", on_click=close_panel, help="Chiudi il pannello")
-    tab_dash, tab_docs, tab_sim = st.tabs([TAB_DASH, TAB_DOCS, TAB_SIM], key="main_tab", on_change="rerun")
 
-# ============================== DASHBOARD ==============================
+    h1, h2, h3 = st.columns([3, 1, 1], vertical_alignment="center")
+    h1.markdown("#### 🔬 Dati, simulazioni e report")
+    h2.button("⛶ Espandi" if not st.session_state.get("panel_wide") else "🗗 Riduci", key="panel_wide_btn", on_click=toggle_wide, width="stretch")
+    h3.button("✕ Chiudi", key="panel_close_btn", on_click=toggle_panel, width="stretch")
+    tab_dash, tab_psi, tab_docs, tab_safety = st.tabs([TAB_DASH, TAB_PSI, TAB_DOCS, TAB_SAFETY], key="main_tab", on_change="rerun")
+
 with tab_dash:
     series_f, points_f, ds_f = filt(store.series), filt(store.points), filt(store.datasets)
 
@@ -491,6 +534,12 @@ with tab_dash:
                 st.dataframe(raw, width="stretch", hide_index=True, height=360)
                 download_buttons(raw, f"originale_{dataset}", "dash_raw", {"file sorgente": labels[dataset]})
 
+# ============================== SIMULATORE PSI (g/g_e) ==============================
+with tab_psi:
+    st.markdown("### 🪐 Laboratorio NASA PSI • Mappe Interattive & Simulazioni Parametriche ($g / g_e$)")
+    st.caption("Simulatore parametrico multi-esperimento basato sul Physical Sciences Informatics Repository (PSI-117, PSI-25, PSI-142, PSI-164, BASS, Saffire).")
+    components.html(PSI_DASHBOARD_HTML, height=1150, scrolling=True)
+
 # ============================== REPORT ==============================
 with tab_docs:
     docs_f = filt(store.documents)
@@ -558,15 +607,87 @@ with tab_sim:
     sim_t0 = st.number_input("Temperatura iniziale T0 [K]", min_value=0.0, value=None, step=1.0, format="%.2f",
                              placeholder="Inserisci la temperatura iniziale", key="sim_t0")
 
-    if st.button("▶️ Avvia simulazione", key="sim_run", type="primary", width="stretch"):
-        sim_inputs = {"Configurazione": sim_conf, "Larghezza W [mm]": sim_w, "Pressione ambiente P [kPa]": sim_p,
-                      "Velocità ventola U_forced [cm/s]": sim_u, "Ossigeno O₂ [% vol]": sim_o2,
-                      "Temperatura iniziale T0 [K]": sim_t0}
-        missing = [k for k, v in sim_inputs.items() if v is None]
-        if missing:
-            st.warning("Compila tutti gli input prima di avviare la simulazione. Mancano: " + ", ".join(missing) + ".")
-        else:
-            st.success("Simulazione avviata con questi parametri:")
-            st.dataframe(pd.DataFrame({"Parametro": list(sim_inputs), "Valore": [str(v) for v in sim_inputs.values()]}),
-                         hide_index=True, width="stretch")
-            st.info("Il modello di calcolo del simulatore non è ancora collegato.")
+# ============================== NORME DI SICUREZZA ==============================
+def show_checks(res: pd.DataFrame, key: str, title: str):
+    """Tabella dei risultati di verifica con icone di esito e download."""
+    if res.empty:
+        st.info("Nessuna grandezza corrisponde a un limite del catalogo.")
+        return
+    view = res.assign(esito=res.esito.map(ESITO_ICON).fillna(res.esito))
+    cols = [c for c in ("esito", "label", "source", "column", "parameter", "limit_id", "limit", "limit_type",
+                        "value_min", "value_max", "n_violations", "worst_value", "margin", "confronto", "unit_note",
+                        "citation") if c in view.columns]
+    m = st.columns(3)
+    m[0].metric("Verifiche", len(res))
+    m[1].metric("Non conformi", int(((res.esito == "non conforme")).sum()))
+    m[2].metric("In zona di rischio", int(((res.esito == "in zona di rischio")).sum()))
+    st.dataframe(view[cols], width="stretch", hide_index=True, height=min(420, 38 + 35 * len(view)))
+    download_buttons(res, title, key, {"fonte limiti": "data/safety/safety_limits.parquet"})
+
+
+with tab_safety:
+    if safety is None:
+        st.warning("Database delle norme di sicurezza non disponibile. Generalo con `python build_safety_db.py`."
+                   + (f"  \nDettaglio: {safety_error}" if safety_error else ""))
+    else:
+        st.caption("Norme e documenti NASA di sicurezza antincendio spaziale (database separato dai report PSI; "
+                   "il filtro esperimento della barra laterale non si applica qui).")
+        st.subheader("📏 Limiti numerici")
+        lim = safety.limits
+        lim_view = lim.assign(limite=[format_limit(r) for r in lim.itertuples()],
+                              automatico=lim.get("applies_by_default", True))
+        st.dataframe(lim_view[["limit_id", "parameter", "limite", "limit_type", "scope", "automatico", "citation"]],
+                     width="stretch", hide_index=True, height=min(420, 38 + 35 * len(lim_view)))
+        with st.expander("Testo originale e note di ogni limite"):
+            for r in lim.itertuples():
+                st.markdown(f"**{r.limit_id}** — {r.description}")
+                st.caption(f"“{r.quote}” {r.citation}" + ("" if r.value_in_text else " · valore non riportato numericamente nel testo"))
+        if not safety.requirements.empty:
+            with st.expander(f"📜 Requisiti NASA-STD-3001 ({len(safety.requirements)})"):
+                for r in safety.requirements.itertuples():
+                    st.markdown(f"**[{r.requirement_id}] {r.title}** — {r.text}")
+                    st.caption(r.citation)
+        st.caption("Per CO, HCN, HCl i documenti rimandano alle SMAC (JSC-20584), non incluse nel corpus.")
+
+        st.subheader("🧪 Verifica delle simulazioni")
+        c1, c2, c3 = st.columns([3, 1, 1])
+        kinds = c1.multiselect("Tipi di serie", list(KIND_LABELS), default=["simulation", "model"],
+                               format_func=lambda k: KIND_LABELS.get(k, k), key="saf_kinds")
+        include_all = c2.toggle("Limiti opzionali", key="saf_all", help="Includi i limiti ad ambito ristretto (volumi inertizzati, capacità di dispositivi)")
+        allow_proxy = c3.toggle("Proxy", key="saf_proxy", help="Confronti indicativi con grandezze affini (es. flame_length vs burn_length)")
+        if kinds:
+            res = safety.check_store(store, kinds=kinds, include_all=include_all, allow_proxy=allow_proxy)
+            if tag is not None and not res.empty and "experiment_tag" in res:
+                res = res[res.experiment_tag == tag]
+            show_checks(res, "saf_store", "verifica_norme_serie")
+
+        st.markdown("**Verifica un file di simulazione** (CSV/XLSX)")
+        st.caption("Le colonne vengono riconosciute dal nome con l'unità, es. `temperature_K`, `O2 [%]`, `x_o2`, "
+                   "`air_velocity_m_s`, `burn_length_mm`; sono accettate anche tabelle nel formato lungo di `points`.")
+        up = st.file_uploader("File dei risultati", type=["csv", "xlsx"], key="saf_upload")
+        if up is not None:
+            try:
+                sim = pd.read_csv(up) if up.name.lower().endswith(".csv") else pd.read_excel(up)
+                res = safety.check_any(sim, include_all=include_all, allow_proxy=allow_proxy)
+                show_checks(res, "saf_upload_res", f"verifica_norme_{up.name.rsplit('.', 1)[0]}")
+            except Exception as e:
+                st.error(f"Impossibile verificare il file: {e}")
+
+        st.subheader("🔎 Cerca e leggi nelle norme")
+        c1, c2 = st.columns([3, 2])
+        sq = c1.text_input("Ricerca (semantica + parole chiave; documenti in inglese)", placeholder="oxygen concentration flammability limit", key="saf_q")
+        sdocs = sorted(safety_index.pages.file_name.unique())
+        sdoc = c2.selectbox("Documento", ["Tutti"] + sdocs, key="saf_doc")
+        if sq:
+            for h in safety_index.search(sq, file_name=None if sdoc == "Tutti" else sdoc, top_k=8):
+                st.markdown(f"**{h.file_name}** · p. {h.page_number}" + (f" · _{h.section}_" if h.section else "")
+                            + f"  <span class='pill'>{h.matched_by}</span>", unsafe_allow_html=True)
+                st.caption(h.text[:500].replace("\n", " ") + "…")
+        if sdoc != "Tutti":
+            n_pages = int(safety_index.pages[safety_index.pages.file_name == sdoc].page_number.max())
+            page = st.number_input("Pagina", 1, n_pages, 1, key="saf_page") if n_pages > 1 else 1
+            row = safety_index.read_pages(sdoc, int(page), int(page))
+            if not row.empty:
+                r = row.iloc[0]
+                st.caption(f"Sezione: {r.section or 'n/d'} · [Fonte: {r.experiment_tag} | {sdoc}, p. {page}]")
+                st.markdown(f"<div class='page-text'>{r.text.replace('<', '&lt;')}</div>", unsafe_allow_html=True)

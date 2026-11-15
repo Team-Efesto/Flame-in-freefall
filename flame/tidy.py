@@ -101,6 +101,17 @@ def _col_kind(s: pd.Series) -> str:
     return "numeric"
 
 
+MAX_LABEL_VALUES, MAX_LABEL_LEN = 6, 60
+
+
+def _is_short_label(s: pd.Series) -> bool:
+    """Colonna-etichetta vera ("EXP", "Model", "0.5 atm"...): pochi valori distinti e brevi.
+    Le colonne di testo libero (timestamp, note, nomi file) non devono finire nell'etichetta della serie."""
+    vals = s.dropna().astype(str).str.strip().unique()
+    vals = [v for v in vals if v and not v.replace(".", "").isdigit()]  # stessi valori che finirebbero nel contesto
+    return len(vals) <= MAX_LABEL_VALUES and all(len(v) <= MAX_LABEL_LEN for v in vals)
+
+
 def _kind_from_tokens(tokens: list[str], current: str) -> str:
     text = " ".join(tokens).lower()
     if re.search(r"\bsim", text):
@@ -160,9 +171,16 @@ def split_series(df: pd.DataFrame) -> list[_Block]:
                 context = []
             if not is_unnamed(col):
                 context.append(b)
+<<<<<<< HEAD
             for v in df[col].dropna().astype(str).str.strip():
                 if v and len(v) <= 40 and v not in context and not v.replace(".", "").isdigit():
                     context.append(v)
+=======
+            if _is_short_label(df[col]):
+                for v in df[col].dropna().astype(str).str.strip():
+                    if v and v not in context and not v.replace(".", "").isdigit():
+                        context.append(v)
+>>>>>>> 17da97f081adae9bb982ec2b97fe284c099a626d
             kind = _kind_from_tokens(context, kind)
             last_was_label = True
         else:

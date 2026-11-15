@@ -17,6 +17,7 @@ from .charts import CHART_TYPES, build_chart
 from .data_store import DataStore
 from .export import sources_of
 from .retrieval import ReportIndex
+from .safety import SafetyLimits
 
 MAX_TOOL_ROUNDS = 10
 PREVIEW_ROWS = 40
@@ -137,6 +138,62 @@ TOOLS = [
     },
 ]
 
+SAFETY_TOOLS = [
+    {
+        "name": "search_safety_norms",
+        "description": (
+            "Ricerca ibrida (semantica + parole chiave) nel database SEPARATO delle norme e dei documenti NASA di "
+            "sicurezza antincendio spaziale (NASA-STD-3001/OCHMO-TB-008, Fire Safety Applications for Spacecraft, "
+            "ECLS Fire Safety, incidente Mir, tecnologie di rilevazione/protezione). Usalo per requisiti, procedure, "
+            "limiti e contesto normativo. Query in inglese. Le pagine si leggono per intero con read_report_pages."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "file_name": {"type": "string", "description": "Filtra su un singolo PDF di sicurezza"},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 10},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "check_safety_compliance",
+        "description": (
+            "Confronta valori numerici con i limiti di sicurezza antincendio estratti dalle norme (catalogo SAF-xxx nel "
+            "prompt), con conversione automatica delle unita'. Tre modalita': (1) result_id di un risultato di "
+            "query_data: se ha le colonne y/y_var/y_unit (formato `points`) verifica ogni serie e grandezza, altrimenti "
+            "riconosce le colonne dal nome; (2) values + quantity + unit per valori espliciti; (3) nessun argomento: "
+            "verifica tutte le serie di simulazione/modello del dataset e le loro condizioni (x_o2, pressione). "
+            "Mostra all'utente una tabella con esito, margine e citazione per ogni limite."),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "result_id": {"type": "string"},
+                "values": {"type": "array", "items": {"type": "number"}},
+                "quantity": {"type": "string", "description": "Grandezza, es. oxygen_concentration, x_o2, temperature, air_velocity, burn_length"},
+                "unit": {"type": "string", "description": "Unita' dei valori, es. %, fraction, K, °C, m/s, cm"},
+                "limit_ids": {"type": "array", "items": {"type": "string"}, "description": "Solo questi limiti (include anche quelli opzionali)"},
+                "include_all": {"type": "boolean", "description": "Includi anche i limiti ad ambito ristretto"},
+                "allow_proxy": {"type": "boolean", "description": "Consenti confronti indicativi con grandezze affini (es. flame_length vs burn_length)"},
+                "title": {"type": "string"},
+            },
+        },
+    },
+]
+
+SAFETY_PROMPT = """
+
+# Norme di sicurezza antincendio spaziale
+- Hai un database separato di norme e documenti NASA di sicurezza antincendio (`search_safety_norms`, pagine leggibili con `read_report_pages`) e un catalogo di limiti numerici verificati (sotto).
+- Quando l'utente chiede se valori, simulazioni o condizioni sperimentali rispettano le norme, usa `check_safety_compliance` (dopo `query_data` se servono dati specifici) e commenta esito e margine. Non fare tu i confronti a mente.
+- Distingui il tipo di limite: requisito normativo, riferimento di progetto, soglia sperimentale o capacita' di un dispositivo. Una "zona di rischio" non e' una violazione di norma: indica condizioni in cui l'incendio e' possibile o piu' pericoloso.
+- Per CO, HCN, HCl e altri gas tossici i documenti rimandano alle SMAC (JSC-20584), che non fanno parte del corpus: dichiaralo, non inventare soglie.
+- Citazioni dalle norme: [Fonte: SAFETY | nome_file.pdf, p. N]; per i limiti indica anche l'ID, es. (SAF-004).
+
+# Catalogo limiti di sicurezza (unita' canoniche)
+{safety_catalog}
+"""
+
 SYSTEM_TEMPLATE = """Sei l'assistente scientifico di "Flame in Freefall", piattaforma di analisi dei dati NASA Physical Science Informatics (PSI) sulla combustione in microgravita' (gocce isolate, cool flames, estinzione).
 
 # Come lavori
@@ -233,10 +290,23 @@ def _preview(df: pd.DataFrame) -> str:
 
 class FlameAgent:
     def __init__(self, client: anthropic.Anthropic, store: DataStore, index: ReportIndex, model: str,
-                 effort: str | None = None):
+                 effort: str | None = None, safety: SafetyLimits | None = None,
+                 safety_index: ReportIndex | None = None):
         self.client, self.store, self.index, self.model, self.effort = client, store, index, model, effort
-        self.system = [{"type": "text", "text": SYSTEM_TEMPLATE.format(catalog=store.catalog_text),
-                        "cache_control": {"type": "ephemeral"}}]
+        self.safety, self.safety_index = safety, safety_index
+        text = SYSTEM_TEMPLATE.format(catalog=store.catalog_text)
+        self.tools = list(TOOLS)
+        if safety is not None and safety_index is not None:
+            self.tools += SAFETY_TOOLS
+            text += SAFETY_PROMPT.format(safety_catalog=safety.catalog_text())
+        self.system = [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    def _resolve_any(self, name: str) -> tuple[str | None, ReportIndex]:
+        """Cerca il file prima tra i report PSI, poi tra i documenti di sicurezza."""
+        fname = self.index.resolve_file(name)
+        if fname or self.safety_index is None:
+            return fname, self.index
+        return self.safety_index.resolve_file(name), self.safety_index
 
     # ----------------------------------------------------------------- tools
     def _run_tool(self, name: str, args: dict, art: TurnArtifacts) -> str:
@@ -270,10 +340,13 @@ class FlameAgent:
                 blocks.append(f"{h.citation} | sezione: {h.section or 'n/d'} | match: {h.matched_by}\n{h.text}")
             return "\n\n---\n\n".join(blocks)[:MAX_TOOL_CHARS * 2]
         if name == "read_report_pages":
-            fname = self.index.resolve_file(args["file_name"])
+            fname, idx = self._resolve_any(args["file_name"])
             if not fname:
-                raise ValueError(f"File non trovato: {args['file_name']}. File: {self.index.pages.file_name.unique().tolist()}")
-            g = self.index.read_pages(fname, int(args["start_page"]), int(args["end_page"]))
+                files = self.index.pages.file_name.unique().tolist()
+                if self.safety_index is not None:
+                    files += self.safety_index.pages.file_name.unique().tolist()
+                raise ValueError(f"File non trovato: {args['file_name']}. File: {files}")
+            g = idx.read_pages(fname, int(args["start_page"]), int(args["end_page"]))
             if g.empty:
                 raise ValueError("Nessuna pagina in questo intervallo.")
             out = []
@@ -304,7 +377,49 @@ class FlameAgent:
             art.explore = self._explore(args["dataset"], args["y_var"], args.get("series_ids") or [],
                                         bool(args.get("log_x")), bool(args.get("log_y")), args.get("reason", ""))
             return f"Suggerimento registrato e mostrato all'utente ({len(art.explore['series_ids'])} serie)."
+        if name == "search_safety_norms" and self.safety_index is not None:
+            fname = args.get("file_name")
+            if fname:
+                fname = self.safety_index.resolve_file(fname) or fname
+            hits = self.safety_index.search(args["query"], file_name=fname, top_k=int(args.get("top_k") or 6))
+            if not hits:
+                return "Nessun risultato nelle norme. Prova un'altra formulazione (in inglese)."
+            blocks = []
+            for h in hits:
+                art.doc_hits.setdefault((h.file_name, h.page_number), {"tag": h.experiment_tag, "section": h.section, "text": h.text})
+                blocks.append(f"{h.citation} | sezione: {h.section or 'n/d'} | match: {h.matched_by}\n{h.text}")
+            return "\n\n---\n\n".join(blocks)[:MAX_TOOL_CHARS * 2]
+        if name == "check_safety_compliance" and self.safety is not None:
+            return self._check_safety(args, art)
         raise ValueError(f"Strumento sconosciuto: {name}")
+
+    def _check_safety(self, args: dict, art: TurnArtifacts) -> str:
+        opts = {"limit_ids": args.get("limit_ids") or None, "include_all": bool(args.get("include_all")),
+                "allow_proxy": bool(args.get("allow_proxy"))}
+        if args.get("result_id"):
+            t = art.tables.get(args["result_id"])
+            if t is None:
+                raise ValueError(f"result_id sconosciuto: {args['result_id']}. Disponibili: {list(art.tables)}")
+            res, what = self.safety.check_any(t.df, **opts), f"risultato {t.id} ('{t.title}')"
+        elif args.get("values"):
+            if not args.get("quantity"):
+                raise ValueError("Con `values` servono anche `quantity` e (consigliato) `unit`.")
+            res = self.safety.check(args["values"], args["quantity"], args.get("unit"), label=args["quantity"], **opts)
+            what = f"{len(args['values'])} valori di {args['quantity']}"
+        else:
+            res, what = self.safety.check_store(self.store, **opts), "tutte le serie di simulazione/modello"
+        if res.empty:
+            return (f"Nessuna grandezza di {what} corrisponde a un limite del catalogo (grandezze verificabili: "
+                    f"{sorted(self.safety.limits.parameter.unique())}). Se una colonna e' equivalente, ripeti con "
+                    "values+quantity+unit oppure allow_proxy=true.")
+        cols = [c for c in ("label", "source", "column", "parameter", "limit_id", "limit", "limit_type", "n_values",
+                            "value_min", "value_max", "n_violations", "worst_value", "margin", "esito", "confronto",
+                            "unit_note", "citation") if c in res.columns]
+        res = res[cols]
+        rid = f"R{len(art.tables) + 1}"
+        art.tables[rid] = ResultTable(rid, args.get("title") or f"Verifica norme antincendio — {what}", res, None, True)
+        summary = res.groupby(["limit_id", "esito"]).size().rename("n").reset_index().to_string(index=False)
+        return f"result_id={rid} (mostrato all'utente). Verificato: {what}.\nRiepilogo per limite:\n{summary}\n\n" + _preview(res)
 
     def _explore(self, dataset: str, y_var: str, series_ids: list[str], log_x: bool, log_y: bool, reason: str) -> dict:
         """Suggerimento per 'Esplora le serie', con i testi esatti mostrati nei menu della dashboard."""
@@ -352,6 +467,8 @@ class FlameAgent:
             "get_document_overview": lambda: "🗂️ Sommari e indici dei report",
             "get_raw_table": lambda: f"📄 Tabella originale {args.get('dataset', '')}",
             "suggest_explorer": lambda: f"🔬 Suggerimento per Esplora le serie: {args.get('dataset', '')}",
+            "search_safety_norms": lambda: f"🛡️ Ricerca nelle norme di sicurezza: “{args.get('query', '')}”",
+            "check_safety_compliance": lambda: "🛡️ Verifica di conformità alle norme antincendio",
         }.get(name, lambda: name)()
 
     # ------------------------------------------------------------------ loop
@@ -367,7 +484,7 @@ class FlameAgent:
         last_text = ""  # testo scritto insieme all'ultima chiamata di strumenti (es. risposta + suggest_explorer)
         for _ in range(MAX_TOOL_ROUNDS):
             response = self.client.messages.create(
-                model=self.model, max_tokens=16000, system=self.system, tools=TOOLS, messages=messages, **extra)
+                model=self.model, max_tokens=16000, system=self.system, tools=self.tools, messages=messages, **extra)
             for k in usage:
                 usage[k] += getattr(response.usage, k, 0) or 0
             if response.stop_reason != "tool_use":
